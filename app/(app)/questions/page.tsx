@@ -1,4 +1,4 @@
-import { requireCan, scopeOf, scopeFilter, can } from '@/lib/authz';
+import { requireCan, scopeOf, scopeFilter, can, visibleWorkstreams } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { PageHeader, Card, StatusPill, Avatar, Empty } from '@/components/ui';
 import { relativeTime } from '@/lib/format';
@@ -13,7 +13,7 @@ export default async function QuestionsPage() {
   const [questions, people, workstreams] = await Promise.all([
     db.openQuestion.findMany({ where, orderBy: { updatedAt: 'desc' }, include: { owner: true, workstream: true } }),
     db.user.findMany({ where: { isActive: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
-    db.workstream.findMany({ orderBy: { order: 'asc' }, select: { id: true, name: true } }),
+    db.workstream.findMany({ where: visibleWorkstreams(user), orderBy: { order: 'asc' }, select: { id: true, name: true } }),
   ]);
 
   const editable = scopeOf(user, 'questions:edit') !== 'none';

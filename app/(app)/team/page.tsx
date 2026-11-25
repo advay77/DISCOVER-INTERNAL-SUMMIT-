@@ -1,4 +1,4 @@
-import { requireCan, can } from '@/lib/authz';
+import { requireCan, can, visibleWorkstreams } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { PageHeader, Card, Avatar, Pill } from '@/components/ui';
 
@@ -8,6 +8,7 @@ export default async function TeamPage() {
 
   const [workstreams, people] = await Promise.all([
     db.workstream.findMany({
+      where: visibleWorkstreams(user),
       orderBy: { order: 'asc' },
       include: { lead: true, members: { include: { user: { include: { role: true } } } } },
     }),
