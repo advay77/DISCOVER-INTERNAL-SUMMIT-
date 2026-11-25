@@ -1,0 +1,467 @@
+// DISCOVER OS — data model
+// Local: SQLite (DATABASE_PROVIDER=sqlite). Hosted: Postgres (DATABASE_PROVIDER=postgresql).
+// Nothing below is specific to either engine.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Prisma will not take env() here, so the provider is rewritten by
+  // scripts/use-provider.mjs — "sqlite" locally, "postgresql" on Vercel
+  // (npm run vercel-build does it automatically).
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------- people & access
+
+model Role {
+  id          String           @id @default(cuid())
+  key         String           @unique // president | officer | director | lead | volunteer
+  name        String
+  level       Int // 1 = most senior
+  description String?
+  isSystem    Boolean          @default(false) // cannot be deleted
+  users       User[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+}
+
+model RolePermission {
+  id         String @id @default(cuid())
+  roleId     String
+  role       Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  capability String // e.g. "speakers:contact"
+  scope      String // all | workstream | own | none
+
+  @@unique([roleId, capability])
+  @@index([roleId])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  title        String?
+  company      String?
+  phone        String?
+  accent       String   @default("#1D6FE0")
+  roleId       String
+  role         Role     @relation(fields: [roleId], references: [id])
+  isActive     Boolean  @default(true)
+  lastSeenAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  memberships     Membership[]
+  ledWorkstreams  Workstream[]     @relation("WorkstreamLead")
+  tasks           Task[]           @relation("TaskOwner")
+  createdTasks    Task[]           @relation("TaskCreator")
+  speakers        Speaker[]        @relation("SpeakerOwner")
+  sponsors        Sponsor[]        @relation("SponsorOwner")
+  vendors         Vendor[]         @relation("VendorOwner")
+  questions       OpenQuestion[]   @relation("QuestionOwner")
+  ownedSessions   Session[]        @relation("SessionOwner")
+  moderated       Session[]        @relation("SessionModerator")
+  messages        Message[]
+  channelMembers  ChannelMember[]
+  files           FileAsset[]
+  notifications   Notification[]
+  activity        ActivityLog[]
+  auditEntries    AuditLog[]
+  retroItems      RetroItem[]
+  reactions       Reaction[]
+  calls           CallParticipant[]
+}
+
+model Workstream {
+  id          String       @id @default(cuid())
+  key         String       @unique
+  name        String
+  description String?
+  color       String       @default("#1D6FE0")
+  leadId      String?
+  lead        User?        @relation("WorkstreamLead", fields: [leadId], references: [id])
+  order       Int          @default(0)
+  members     Membership[]
+  tasks       Task[]
+  speakers    Speaker[]
+  sponsors    Sponsor[]
+  vendors     Vendor[]
+  questions   OpenQuestion[]
+  channels    Channel[]
+}
+
+model Membership {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workstreamId String
+  workstream   Workstream @relation(fields: [workstreamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workstreamId])
+}
+
+// ---------------------------------------------------------------- the event
+
+model Event {
+  id        String   @id @default(cuid())
+  name      String
+  cycle     Int // 2026
+  theme     String?
+  dayOneTheme String?
+  dayTwoTheme String?
+  startDate DateTime
+  endDate   DateTime
+  venue     String?
+  city      String?
+  status    String   @default("planning") // planning | live | closed
+  goalRegistrants Int  @default(300)
+  goalOrganizations Int @default(30)
+  goalSurvey      Float @default(4.5)
+  isCurrent Boolean  @default(false)
+
+  tasks     Task[]
+  speakers  Speaker[]
+  sessions  Session[]
+  sponsors  Sponsor[]
+  vendors   Vendor[]
+  attendees Attendee[]
+  questions OpenQuestion[]
+  retro     RetroItem[]
+}
+
+// The annual playbook, lifted from the 2024 "Main Schedule" tab.
+model PlaybookStep {
+  id            String  @id @default(cuid())
+  title         String
+  category      String
+  workstreamKey String?
+  monthsBefore  Int // 6 = six months before the event
+  order         Int
+  notes         String?
+}
+
+model Task {
+  id           String      @id @default(cuid())
+  title        String
+  description  String?
+  category     String      @default("Summit Logistics")
+  status       String      @default("todo") // todo | in_progress | review | done
+  priority     String      @default("medium") // low | medium | high
+  dueDate      DateTime?
+  completedAt  DateTime?
+  order        Int         @default(0)
+
+  eventId      String?
+  event        Event?      @relation(fields: [eventId], references: [id])
+  workstreamId String?
+  workstream   Workstream? @relation(fields: [workstreamId], references: [id])
+  ownerId      String?
+  owner        User?       @relation("TaskOwner", fields: [ownerId], references: [id])
+  createdById  String?
+  createdBy    User?       @relation("TaskCreator", fields: [createdById], references: [id])
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([status])
+  @@index([ownerId])
+  @@index([workstreamId])
+}
+
+// 18 columns, ported from the 2026 Speaker Outreach Tracker.
+model Speaker {
+  id            String      @id @default(cuid())
+  name          String
+  title         String?
+  company       String?
+  email         String? // gated by speakers:contact
+  phone         String? // gated by speakers:contact
+  priority      String? // A | B | C
+  speakerType   String      @default("Panelist") // Keynote | Featured Speaker | Panelist | Moderator | Presenter
+  topicFit      String?
+  status        String      @default("Identified") // Identified | Invited | Responded | Confirmed | Declined
+  headshot      Boolean     @default(false)
+  bio           Boolean     @default(false)
+  registered    Boolean     @default(false)
+  response      String?
+  confirmed     Boolean     @default(false)
+  prepCallNeeded Boolean    @default(false)
+  notes         String?
+  linkedin      String?
+
+  eventId       String?
+  event         Event?      @relation(fields: [eventId], references: [id])
+  workstreamId  String?
+  workstream    Workstream? @relation(fields: [workstreamId], references: [id])
+  ownerId       String? // "Source / Connection"
+  owner         User?       @relation("SpeakerOwner", fields: [ownerId], references: [id])
+
+  sessions      SessionSpeaker[]
+  updatedAt     DateTime    @updatedAt
+  createdAt     DateTime    @default(now())
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id])
+  day         Int // 1 | 2
+  startTime   String // "9:00am"
+  endTime     String
+  title       String
+  description String?
+  kind        String   @default("session") // session | break | meal | keynote | panel | gala
+  room        String?
+  ownerId     String?
+  owner       User?    @relation("SessionOwner", fields: [ownerId], references: [id])
+  moderatorId String?
+  moderator   User?    @relation("SessionModerator", fields: [moderatorId], references: [id])
+  status      String   @default("planned") // planned | confirmed
+  order       Int      @default(0)
+  speakers    SessionSpeaker[]
+}
+
+model SessionSpeaker {
+  id        String  @id @default(cuid())
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  speakerId String
+  speaker   Speaker @relation(fields: [speakerId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, speakerId])
+}
+
+model Sponsor {
+  id           String      @id @default(cuid())
+  company      String
+  tier         String      @default("Supporting") // Presenting | Gold | Silver | Supporting
+  amount       Float? // gated by finance:view
+  status       String      @default("Prospect") // Prospect | Invited | Negotiating | Confirmed | Declined
+  contactName  String?
+  contactEmail String? // gated by finance/contact
+  logoReceived Boolean     @default(false)
+  contractSigned Boolean   @default(false)
+  notes        String?
+  eventId      String?
+  event        Event?      @relation(fields: [eventId], references: [id])
+  workstreamId String?
+  workstream   Workstream? @relation(fields: [workstreamId], references: [id])
+  ownerId      String?
+  owner        User?       @relation("SponsorOwner", fields: [ownerId], references: [id])
+  updatedAt    DateTime    @updatedAt
+}
+
+model Vendor {
+  id            String      @id @default(cuid())
+  name          String
+  service       String
+  paymentMethod String?
+  amount        Float? // gated by finance:view
+  paymentStatus String      @default("Not started") // Not started | Quoted | Deposit paid | Paid
+  dueDate       DateTime?
+  notes         String?
+  eventId       String?
+  event         Event?      @relation(fields: [eventId], references: [id])
+  workstreamId  String?
+  workstream    Workstream? @relation(fields: [workstreamId], references: [id])
+  ownerId       String?
+  owner         User?       @relation("VendorOwner", fields: [ownerId], references: [id])
+  updatedAt     DateTime    @updatedAt
+}
+
+model Attendee {
+  id         String   @id @default(cuid())
+  name       String
+  company    String?
+  email      String? // gated by attendees:contact
+  ticketType String   @default("General") // General | VIP | Student | Speaker
+  status     String   @default("Pending") // Confirmed | Pending | Waitlist | Cancelled
+  paid       Boolean  @default(false)
+  eventId    String?
+  event      Event?   @relation(fields: [eventId], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+model OpenQuestion {
+  id           String      @id @default(cuid())
+  question     String
+  status       String      @default("Open") // Open | In progress | Answered | Blocked
+  update       String?
+  dueDate      DateTime?
+  eventId      String?
+  event        Event?      @relation(fields: [eventId], references: [id])
+  workstreamId String?
+  workstream   Workstream? @relation(fields: [workstreamId], references: [id])
+  ownerId      String?
+  owner        User?       @relation("QuestionOwner", fields: [ownerId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model RetroItem {
+  id       String  @id @default(cuid())
+  eventId  String
+  event    Event   @relation(fields: [eventId], references: [id])
+  kind     String // plus | delta | consider
+  text     String
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------- communication
+
+model Channel {
+  id           String      @id @default(cuid())
+  key          String      @unique
+  name         String
+  purpose      String?
+  type         String      @default("public") // public | private | workstream | dm
+  workstreamId String?
+  workstream   Workstream? @relation(fields: [workstreamId], references: [id])
+  createdAt    DateTime    @default(now())
+  members      ChannelMember[]
+  messages     Message[]
+  callers      CallParticipant[]
+}
+
+model ChannelMember {
+  id         String   @id @default(cuid())
+  channelId  String
+  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt DateTime @default(now())
+
+  @@unique([channelId, userId])
+}
+
+// ---- huddles: a live voice room attached to a channel -------------------
+
+model CallParticipant {
+  id        String   @id @default(cuid())
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  muted     Boolean  @default(false)
+  joinedAt  DateTime @default(now())
+  heartbeat DateTime @default(now())
+
+  @@unique([channelId, userId])
+  @@index([channelId, heartbeat])
+}
+
+/// WebRTC signalling, delivered by polling. Rows are consumed once read.
+model CallSignal {
+  id        String   @id @default(cuid())
+  channelId String
+  fromId    String
+  toId      String
+  kind      String // offer | answer | ice | bye
+  payload   String
+  createdAt DateTime @default(now())
+
+  @@index([channelId, toId, createdAt])
+}
+
+model Reaction {
+  id        String  @id @default(cuid())
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+}
+
+// One message model serves channels, DMs and every object thread.
+model Message {
+  id         String   @id @default(cuid())
+  body       String
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id])
+
+  channelId  String?
+  channel    Channel? @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  // object threads: task | speaker | sponsor | vendor | question | session
+  entityType String?
+  entityId   String?
+
+  parentId   String?
+  parent     Message? @relation("Replies", fields: [parentId], references: [id])
+  replies    Message[] @relation("Replies")
+
+  mentions   String? // comma separated user ids
+  deletedAt  DateTime?
+  editedAt   DateTime?
+  createdAt  DateTime @default(now())
+  files      FileAsset[]
+  reactions  Reaction[]
+
+  @@index([channelId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model FileAsset {
+  id         String   @id @default(cuid())
+  name       String
+  path       String
+  mime       String
+  size       Int
+  folder     String   @default("General")
+  durationMs Int?
+  /// Set when the file is stored in the database (hosted deploys with no
+  /// writable disk). Null when it lives under storage/ on local disk.
+  data       Bytes?
+  uploaderId String?
+  uploader   User?    @relation(fields: [uploaderId], references: [id])
+  messageId  String?
+  message    Message? @relation(fields: [messageId], references: [id])
+  entityType String?
+  entityId   String?
+  createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // mention | assignment | due | announce
+  text      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  verb       String
+  entityType String
+  entityId   String?
+  summary    String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  action    String
+  target    String
+  before    String?
+  after     String?
+  createdAt DateTime @default(now())
+}

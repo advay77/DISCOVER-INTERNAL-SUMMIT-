@@ -1,0 +1,39 @@
+{
+  "name": "discover-os",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DISCOVER Summit Command Center \u2014 internal operating system for the DISCOVER board, workstream leads and volunteers.",
+  "scripts": {
+    "dev": "next dev -p 3100",
+    "build": "next build",
+    "start": "next start -p 3100",
+    "lint": "next lint",
+    "db:push": "prisma db push",
+    "db:seed": "node --experimental-strip-types prisma/seed.ts",
+    "db:reset": "prisma db push --force-reset && npm run db:seed",
+    "setup": "prisma generate && prisma db push && npm run db:seed",
+    "use:sqlite": "node scripts/use-provider.mjs sqlite",
+    "use:postgres": "node scripts/use-provider.mjs postgresql",
+    "vercel-build": "node scripts/use-provider.mjs postgresql && prisma generate && prisma db push --accept-data-loss && next build"
+  },
+  "dependencies": {
+    "@prisma/client": "6.1.0",
+    "bcryptjs": "2.4.3",
+    "clsx": "2.1.1",
+    "jose": "5.9.6",
+    "next": "^15.5.29",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "2.4.6",
+    "@types/node": "22.10.2",
+    "@types/react": "19.0.2",
+    "@types/react-dom": "19.0.2",
+    "autoprefixer": "10.4.20",
+    "postcss": "8.4.49",
+    "prisma": "6.1.0",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.7.2"
+  }
+}
