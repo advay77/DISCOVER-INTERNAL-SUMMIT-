@@ -24,21 +24,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(can(user, 'questions:view')
       ? [{ href: '/questions', label: 'Questions', icon: 'questions' as const, group: '' }]
       : []),
+    { href: '/events', label: 'Events', icon: 'agenda', group: '' },
 
     ...(can(user, 'speakers:view')
-      ? [{ href: '/speakers', label: 'Speakers', icon: 'speakers' as const, group: 'Summit' }]
+      ? [{ href: '/speakers', label: 'Speakers', icon: 'speakers' as const, group: 'Annual Summit' }]
       : []),
     ...(can(user, 'agenda:view')
-      ? [{ href: '/agenda', label: 'Run of show', icon: 'agenda' as const, group: 'Summit' }]
+      ? [{ href: '/agenda', label: 'Run of show', icon: 'agenda' as const, group: 'Annual Summit' }]
       : []),
     ...(can(user, 'sponsors:view')
-      ? [{ href: '/sponsors', label: 'Sponsors', icon: 'sponsors' as const, group: 'Summit' }]
+      ? [{ href: '/sponsors', label: 'Sponsors', icon: 'sponsors' as const, group: 'Annual Summit' }]
       : []),
     ...(can(user, 'vendors:view')
-      ? [{ href: '/logistics', label: 'Logistics', icon: 'logistics' as const, group: 'Summit' }]
+      ? [{ href: '/logistics', label: 'Logistics', icon: 'logistics' as const, group: 'Annual Summit' }]
       : []),
     ...(can(user, 'attendees:view')
-      ? [{ href: '/attendees', label: 'Attendees', icon: 'attendees' as const, group: 'Summit' }]
+      ? [{ href: '/attendees', label: 'Attendees', icon: 'attendees' as const, group: 'Annual Summit' }]
       : []),
 
     ...(can(user, 'chat:use')

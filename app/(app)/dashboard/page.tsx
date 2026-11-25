@@ -37,6 +37,20 @@ export default async function Dashboard() {
     }),
   ]);
 
+  // Everything DISCOVER runs next, not only the summit.
+  const upcomingEvents = await db.event.findMany({
+    where: {
+      endDate: { gte: now },
+      status: { not: 'cancelled' },
+      ...(scopeOf(user, 'finance:view') === 'none'
+        ? { OR: [{ workstreamId: null }, { workstream: { is: { restricted: false } } }] }
+        : {}),
+    },
+    orderBy: { startDate: 'asc' },
+    take: 4,
+    include: { owner: true, workstream: true },
+  });
+
   const total = tasks.length;
   const done = tasks.filter((t) => t.status === 'done').length;
   const overdue = tasks.filter((t) => t.status !== 'done' && t.dueDate && t.dueDate < now).length;
@@ -210,7 +224,7 @@ export default async function Dashboard() {
       </div>
 
       {/* Rings + questions + activity */}
-      <div className="grid gap-5 xl:grid-cols-[1fr_1fr_1.1fr]">
+      <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
         <Card title="Where the cycle stands">
           <div className="flex items-start justify-around gap-2">
             {can(user, 'speakers:view') && (
@@ -271,6 +285,49 @@ export default async function Dashboard() {
             )}
           </Card>
         )}
+
+        <Card
+          title="What is coming up"
+          action={
+            <Link href="/events" className="text-[13px] font-semibold text-brand hover:underline">
+              All events →
+            </Link>
+          }
+          bodyClass="divide-y divide-line p-0"
+        >
+          {upcomingEvents.length === 0 ? (
+            <div className="p-5">
+              <Empty title="Nothing scheduled" />
+            </div>
+          ) : (
+            upcomingEvents.map((e) => (
+              <Link
+                key={e.id}
+                href={`/events/${e.id}`}
+                className="flex items-center gap-3 px-5 py-3 hover:bg-paper"
+              >
+                <span className="w-11 shrink-0 text-center">
+                  <span className="block text-[10px] font-bold uppercase text-ink-faint">
+                    {shortDate(e.startDate).split(' ')[0]}
+                  </span>
+                  <span className="block text-[17px] font-bold leading-none text-ink">
+                    {shortDate(e.startDate).split(' ')[1]}
+                  </span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13.5px] font-medium text-ink">{e.name}</span>
+                  <span className="block truncate text-[11.5px] text-ink-faint">
+                    {e.workstream?.name ?? ''}
+                    {e.venue ? ` · ${e.venue}` : ''}
+                  </span>
+                </span>
+                <Pill tone={e.kind === 'summit' ? 'brand' : 'neutral'}>
+                  {e.kind === 'summit' ? 'Summit' : e.kind}
+                </Pill>
+              </Link>
+            ))
+          )}
+        </Card>
 
         <Card
           title="Recent communications"

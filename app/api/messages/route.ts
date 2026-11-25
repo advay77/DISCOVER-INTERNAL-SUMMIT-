@@ -18,6 +18,7 @@ const THREAD_CAPABILITY: Record<string, string> = {
   vendor: 'vendors:view',
   question: 'questions:view',
   session: 'agenda:view',
+  event: 'tasks:view',
 };
 
 export async function GET(req: Request) {

@@ -75,6 +75,8 @@ model User {
   auditEntries    AuditLog[]
   retroItems      RetroItem[]
   reactions       Reaction[]
+  hostedEvents    Event[]          @relation("EventHost")
+  ownedEvents     Event[]          @relation("EventOwner")
 }
 
 model Workstream {
@@ -97,6 +99,7 @@ model Workstream {
   vendors     Vendor[]
   questions   OpenQuestion[]
   channels    Channel[]
+  events      Event[]
 }
 
 model Membership {
@@ -115,6 +118,11 @@ model Event {
   id        String   @id @default(cuid())
   name      String
   cycle     Int // 2026
+  /// summit is the two-day flagship. Everything else is a smaller event the
+  /// workstreams run through the year: webinars, the Earth Day networking
+  /// evening, sessions with schools.
+  kind      String   @default("summit") // summit | webinar | networking | academic | other
+  description String?
   theme     String?
   dayOneTheme String?
   dayTwoTheme String?
@@ -122,7 +130,18 @@ model Event {
   endDate   DateTime
   venue     String?
   city      String?
-  status    String   @default("planning") // planning | live | closed
+  /// Smaller events carry their guest inline rather than through the full
+  /// speaker pipeline, which only the summit needs.
+  guest      String?
+  guestTitle String?
+  guestLink  String?
+  hostId     String?
+  host       User?    @relation("EventHost", fields: [hostId], references: [id])
+  ownerId      String?
+  owner        User?       @relation("EventOwner", fields: [ownerId], references: [id])
+  workstreamId String?
+  workstream   Workstream? @relation(fields: [workstreamId], references: [id])
+  status    String   @default("planning") // planning | scheduled | complete | cancelled
   goalRegistrants Int  @default(300)
   goalOrganizations Int @default(30)
   goalSurvey      Float @default(4.5)

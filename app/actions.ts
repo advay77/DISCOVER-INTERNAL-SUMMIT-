@@ -91,6 +91,52 @@ export async function createTask(data: FormData) {
   return { ok: true, id: task.id };
 }
 
+/* ----------------------------------------------------------------- events */
+
+export async function createEvent(data: FormData) {
+  const user = await requireUser();
+  if (scopeOf(user, 'tasks:edit') === 'none') return { error: 'You cannot create events.' };
+
+  const name = text(data.get('name'), BOUND.title);
+  if (!name) return { error: 'Give the event a name.' };
+
+  const day = validDate(data.get('date'));
+  if (!day) return { error: 'Pick a date.' };
+
+  // Combine the date and the time into one start, then give it a sensible length.
+  const time = text(data.get('time'), 5) || '17:00';
+  const [hh, mm] = time.split(':').map((n) => Number(n));
+  const start = new Date(day);
+  start.setHours(Number.isFinite(hh) ? hh : 17, Number.isFinite(mm) ? mm : 0, 0, 0);
+
+  const kind = oneOf(data.get('kind'), ['webinar', 'networking', 'academic', 'other'] as const, 'webinar');
+  const hours = kind === 'webinar' ? 1 : 3;
+  const end = new Date(start.getTime() + hours * 3600_000);
+
+  const event = await db.event.create({
+    data: {
+      name,
+      cycle: start.getFullYear(),
+      kind,
+      description: optionalText(data.get('description'), BOUND.notes),
+      startDate: start,
+      endDate: end,
+      venue: optionalText(data.get('venue'), BOUND.title) ?? (kind === 'webinar' ? 'Online' : null),
+      guest: optionalText(data.get('guest'), BOUND.name),
+      guestTitle: optionalText(data.get('guestTitle'), BOUND.title),
+      ownerId: validId(data.get('ownerId')) ?? user.id,
+      workstreamId: validId(data.get('workstreamId')),
+      status: 'planning',
+      isCurrent: false,
+    },
+  });
+
+  await log(user.id, 'created', 'event', name, event.id);
+  revalidatePath('/events');
+  revalidatePath('/dashboard');
+  return { ok: true, id: event.id };
+}
+
 /* --------------------------------------------------------------- speakers */
 
 export async function updateSpeaker(id: string, data: FormData) {

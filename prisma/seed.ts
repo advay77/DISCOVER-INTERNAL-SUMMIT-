@@ -14,6 +14,7 @@ import { DEFAULT_MATRIX, CAPABILITY_KEYS } from '../lib/capabilities.ts';
 import { PLAYBOOK } from './playbook.ts';
 import { ACCOUNTS } from './accounts.ts';
 import { newPassword, writeCredentials } from './credentials.ts';
+import { EVENTS } from './events.ts';
 
 const db = new PrismaClient();
 
@@ -184,11 +185,14 @@ async function main() {
     if (u.leads) await db.workstream.update({ where: { id: ws[u.leads] }, data: { leadId: created.id } });
   }
 
-  console.log('→ the 2026 cycle');
+  console.log('→ the 2026 summit');
   // Dates are unconfirmed in the source trackers — change them in Admin → Event.
   const event = await db.event.create({
     data: {
       name: 'DISCOVER Summit 2026', cycle: 2026,
+      kind: 'summit',
+      description:
+        'The flagship two-day summit. Speakers, run of show, sponsors, logistics and registration all hang off this event.',
       theme: 'A Decade of DISCOVER',
       dayOneTheme: 'Building Smarter Operations',
       dayTwoTheme: 'Leading Through Change',
@@ -196,9 +200,37 @@ async function main() {
       endDate: new Date('2027-04-15T17:00:00Z'),
       venue: 'To be confirmed', city: 'New York, NY',
       status: 'planning', isCurrent: true,
+      workstreamId: ws['summit'],
+      ownerId: users['odi@discover.org'],
       goalRegistrants: 300, goalOrganizations: 30, goalSurvey: 4.5,
     },
   });
+
+  console.log('→ the other events (webinars, networking, academic)');
+  for (const e of EVENTS) {
+    // Local time, so a 5pm webinar reads as 5pm rather than shifting by the offset.
+    const start = new Date(`${e.date}T17:00:00`);
+    const end = new Date(start.getTime() + (e.durationHours ?? 1) * 3600_000);
+    await db.event.create({
+      data: {
+        name: e.name,
+        cycle: start.getFullYear(),
+        kind: e.kind,
+        description: e.description ?? null,
+        startDate: start,
+        endDate: end,
+        venue: e.venue ?? (e.kind === 'webinar' ? 'Online' : null),
+        guest: e.guest ?? null,
+        guestTitle: e.guestTitle ?? null,
+        guestLink: e.guestLink ?? null,
+        hostId: e.host ? users[e.host] : null,
+        ownerId: users[e.owner] ?? null,
+        workstreamId: ws[e.workstream] ?? null,
+        status: e.status ?? 'planning',
+        isCurrent: false,
+      },
+    });
+  }
 
   console.log('→ the annual playbook');
   await db.playbookStep.createMany({ data: PLAYBOOK });
@@ -356,7 +388,9 @@ async function main() {
   await writeCredentials(issued);
 
   console.log('\n✓ seeded.');
-  console.log(`  ${USERS.length} people · ${steps.length + actionLog.length} tasks · ${SPEAKERS.length} speakers · ${CHANNELS.length} channels`);
+  console.log(
+    `  ${USERS.length} people · ${EVENTS.length + 1} events · ${steps.length + actionLog.length} tasks · ${SPEAKERS.length} speakers · ${CHANNELS.length} channels`,
+  );
   console.log('  Fresh passwords written to CREDENTIALS.md (gitignored, local only).');
 }
 

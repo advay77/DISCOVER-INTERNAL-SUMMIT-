@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Product** | DISCOVER OS — Summit Command Center |
+| **Product** | DISCOVER OS — the internal operating system for DISCOVER |
 | **Owner** | Advay Anand |
 | **Version** | 1.0 — V1 built and running |
 | **Date** | 25 November 2026 |
-| **Cycle in scope** | DISCOVER Summit 2026 |
+| **Scope** | The whole year: the Annual Summit **and** the webinars, networking evenings and campus sessions around it |
 | **Related** | [PRODUCT-REVIEW.md](PRODUCT-REVIEW.md) (design rationale) · [CREDENTIALS.md](CREDENTIALS.md) (accounts) · [README.md](README.md) (how to run it) |
 
 ---
@@ -241,6 +241,35 @@ returns 403; the Logistics page renders vendors with no Amount column present in
 | P2 | Each step carries a month offset, category and default workstream, and is dated backwards from the event |
 | P3 | Changing the event dates re-dates the plan |
 | P4 | The playbook template is editable in Admin, so next year starts better than this one |
+
+### 6.2b Events — the summit is one of several
+
+The Project Tracker is explicit: *"Main event - Annual Summit; other events -
+webinars, earth day in person, etc."* The product treats an event as a first
+class thing, of which the summit is one kind.
+
+| Kind | What it is | Who runs it |
+|---|---|---|
+| **Annual Summit** | The two-day flagship. Carries the full machinery: speaker pipeline, run of show, sponsors, logistics, registration | Annual Summit workstream |
+| **Webinar** | The Professional Development Speaker Series — about an hour, online, one guest and an interviewer | Professional Development |
+| **Networking** | In person: the Earth Day evening, a panel hosted at a member's office | Professional Development |
+| **Academic** | Sessions with schools and university supply chain programmes | Academic Engagement |
+| **Other** | Anything else a workstream runs | Any |
+
+Requirements:
+
+| ID | Requirement |
+|---|---|
+| E1 | Every event has a kind, a date, an owner and a workstream |
+| E2 | Tasks, open questions, files and a discussion thread attach to **any** event, not only the summit |
+| E3 | Smaller events carry their guest inline — name, title, profile link, host — rather than through the speaker pipeline, which only the summit needs |
+| E4 | The summit's deep modules appear only on the summit; a webinar page is not cluttered with sponsors and floorplans |
+| E5 | The events list shows upcoming and past across every kind, filterable by kind |
+| E6 | An event inside a restricted workstream follows the same rule as everything else in it |
+
+Seeded from the trackers: the 2026 Summit, plus **six real webinars and panels**
+from the 2024 "Monthly Webinar" tab, plus the Earth Day evening and a campus
+session named in the Project Tracker.
 
 ### 6.3 Modules
 
