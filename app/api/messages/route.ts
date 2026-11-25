@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { currentUser } from '@/lib/auth';
 import { can } from '@/lib/authz';
+import { rateLimit, clientKey, LIMITS as RATE } from '@/lib/ratelimit';
+import { text, idList, LIMITS as BOUND } from '@/lib/validate';
 
 /**
  * One endpoint serves channel messages, DMs and every object thread.
@@ -79,11 +81,21 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
   if (!can(user, 'chat:use')) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
-  const { channelId, entityType, entityId, body, fileIds } = await req.json();
-  const text = String(body ?? '').trim();
-  const attachments: string[] = Array.isArray(fileIds) ? fileIds.map(String).slice(0, 10) : [];
-  if (!text && attachments.length === 0) {
-    return NextResponse.json({ error: 'empty' }, { status: 400 });
+  const limited = await rateLimit(`msg:${user.id}`, RATE.message.limit, RATE.message.windowMs);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'You are posting very fast. Give it a moment.' },
+      { status: 429, headers: { 'retry-after': String(limited.retryAfterSeconds) } },
+    );
+  }
+
+  const payload = await req.json().catch(() => ({}));
+  const { channelId, entityType, entityId, body, fileIds } = payload;
+  const messageText = text(body, BOUND.body);
+  const attachments = idList(fileIds, 10);
+
+  if (!messageText && attachments.length === 0) {
+    return NextResponse.json({ error: 'Nothing to send.' }, { status: 400 });
   }
 
   if (channelId) {
@@ -101,7 +113,7 @@ export async function POST(req: Request) {
   }
 
   // @mentions → notifications
-  const names = Array.from(text.matchAll(/@([A-Za-z][\w.-]*)/g)).map((m) => m[1].toLowerCase());
+  const names = Array.from(messageText.matchAll(/@([A-Za-z][\w.-]*)/g)).map((m) => m[1].toLowerCase());
   const mentioned = names.length
     ? await db.user.findMany({
         where: { OR: names.map((n) => ({ name: { startsWith: n } })) },
@@ -111,7 +123,7 @@ export async function POST(req: Request) {
 
   const message = await db.message.create({
     data: {
-      body: text,
+      body: messageText,
       authorId: user.id,
       channelId: channelId ?? null,
       entityType: entityType ?? null,

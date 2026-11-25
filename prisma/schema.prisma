@@ -51,6 +51,9 @@ model User {
   roleId       String
   role         Role     @relation(fields: [roleId], references: [id])
   isActive     Boolean  @default(true)
+  /// Bumped when the person is deactivated or their password changes, which
+  /// invalidates every session cookie issued before that moment.
+  sessionEpoch Int      @default(0)
   lastSeenAt   DateTime?
   createdAt    DateTime @default(now())
 
@@ -426,6 +429,15 @@ model ActivityLog {
   createdAt  DateTime @default(now())
 
   @@index([createdAt])
+}
+
+/// Fixed-window rate limit counters, shared by every instance.
+model RateCounter {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime
+
+  @@index([resetAt])
 }
 
 model AuditLog {

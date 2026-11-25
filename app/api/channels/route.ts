@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { currentUser } from '@/lib/auth';
 import { can } from '@/lib/authz';
+import { rateLimit, LIMITS as RATE } from '@/lib/ratelimit';
+import { text, idList, oneOf, STATUSES, LIMITS as BOUND } from '@/lib/validate';
 
 function slug(name: string) {
   return name
@@ -35,8 +37,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Your role cannot create channels.' }, { status: 403 });
   }
 
-  const { name, purpose, type, memberIds } = await req.json();
-  const clean = String(name ?? '').trim();
+  const limited = await rateLimit(`chan:${user.id}`, RATE.channel.limit, RATE.channel.windowMs);
+  if (!limited.ok) {
+    return NextResponse.json({ error: 'Too many channels at once.' }, { status: 429 });
+  }
+
+  const payload = await req.json().catch(() => ({}));
+  const { name, purpose, type, memberIds } = payload;
+  const clean = text(name, BOUND.channelName);
   if (clean.length < 2) return NextResponse.json({ error: 'Give the channel a name.' }, { status: 400 });
 
   const key = slug(clean);
@@ -45,19 +53,19 @@ export async function POST(req: Request) {
   const clash = await db.channel.findUnique({ where: { key } });
   if (clash) return NextResponse.json({ error: `#${key} already exists.` }, { status: 409 });
 
-  const kind = type === 'private' ? 'private' : 'public';
+  const kind = oneOf(type, STATUSES.channel, 'public');
 
   const channel = await db.channel.create({
     data: {
       key,
       name: key,
-      purpose: String(purpose ?? '').trim() || null,
+      purpose: text(purpose, BOUND.purpose) || null,
       type: kind,
     },
   });
 
   // The creator is always in it; everyone picked joins too.
-  const picked = Array.isArray(memberIds) ? memberIds.map(String) : [];
+  const picked = idList(memberIds, 60);
   const ids = Array.from(new Set([user.id, ...picked]));
   const valid = await db.user.findMany({ where: { id: { in: ids }, isActive: true }, select: { id: true } });
 

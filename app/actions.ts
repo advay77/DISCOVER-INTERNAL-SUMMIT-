@@ -5,6 +5,18 @@ import { db } from '@/lib/db';
 import { requireUser, allows, can, scopeOf } from '@/lib/authz';
 import { hashPassword } from '@/lib/auth';
 import { CAPABILITY_KEYS, SCOPES } from '@/lib/capabilities';
+import {
+  text,
+  optionalText,
+  email as validEmail,
+  oneOf,
+  date as validDate,
+  wholeNumber,
+  id as validId,
+  idList,
+  STATUSES,
+  LIMITS as BOUND,
+} from '@/lib/validate';
 
 async function log(actorId: string, verb: string, entityType: string, summary: string, entityId?: string) {
   await db.activityLog.create({ data: { actorId, verb, entityType, entityId, summary } });
@@ -14,15 +26,17 @@ async function log(actorId: string, verb: string, entityType: string, summary: s
 
 export async function setTaskStatus(taskId: string, status: string) {
   const user = await requireUser();
+  if (!validId(taskId)) return { error: 'Task not found.' };
+  const next = oneOf(status, STATUSES.task, 'todo');
   const task = await db.task.findUnique({ where: { id: taskId } });
   if (!task) return { error: 'Task not found.' };
   if (!allows(user, 'tasks:edit', task)) return { error: 'You cannot change this task.' };
 
   await db.task.update({
     where: { id: taskId },
-    data: { status, completedAt: status === 'done' ? new Date() : null },
+    data: { status: next, completedAt: next === 'done' ? new Date() : null },
   });
-  await log(user.id, status === 'done' ? 'completed' : 'moved', 'task', `${task.title} → ${status.replace('_', ' ')}`, taskId);
+  await log(user.id, next === 'done' ? 'completed' : 'moved', 'task', `${task.title} → ${next.replace('_', ' ')}`, taskId);
   revalidatePath('/tasks');
   revalidatePath('/dashboard');
   return { ok: true };
@@ -34,13 +48,13 @@ export async function updateTask(taskId: string, data: FormData) {
   if (!task) return { error: 'Task not found.' };
   if (!allows(user, 'tasks:edit', task)) return { error: 'You cannot change this task.' };
 
-  const ownerId = String(data.get('ownerId') ?? '');
+  const ownerId = validId(data.get('ownerId'));
   const patch: any = {
-    title: String(data.get('title') ?? task.title),
-    description: String(data.get('description') ?? ''),
-    status: String(data.get('status') ?? task.status),
-    priority: String(data.get('priority') ?? task.priority),
-    dueDate: data.get('dueDate') ? new Date(String(data.get('dueDate'))) : null,
+    title: text(data.get('title'), BOUND.title) || task.title,
+    description: optionalText(data.get('description'), BOUND.notes),
+    status: oneOf(data.get('status'), STATUSES.task, task.status as any),
+    priority: oneOf(data.get('priority'), STATUSES.priority, task.priority as any),
+    dueDate: validDate(data.get('dueDate')),
   };
   if (ownerId && can(user, 'tasks:assign')) patch.ownerId = ownerId;
 
@@ -55,19 +69,19 @@ export async function createTask(data: FormData) {
   if (scopeOf(user, 'tasks:edit') === 'none') return { error: 'You cannot create tasks.' };
   const event = await db.event.findFirst({ where: { isCurrent: true } });
 
-  const title = String(data.get('title') ?? '').trim();
+  const title = text(data.get('title'), BOUND.title);
   if (!title) return { error: 'A task needs a title.' };
 
   const task = await db.task.create({
     data: {
       title,
-      description: String(data.get('description') ?? '') || null,
-      category: String(data.get('category') ?? 'Summit Logistics'),
-      priority: String(data.get('priority') ?? 'medium'),
+      description: optionalText(data.get('description'), BOUND.notes),
+      category: text(data.get('category'), BOUND.shortText) || 'Summit Logistics',
+      priority: oneOf(data.get('priority'), STATUSES.priority, 'medium'),
       status: 'todo',
-      dueDate: data.get('dueDate') ? new Date(String(data.get('dueDate'))) : null,
-      workstreamId: String(data.get('workstreamId') ?? '') || null,
-      ownerId: String(data.get('ownerId') ?? '') || user.id,
+      dueDate: validDate(data.get('dueDate')),
+      workstreamId: validId(data.get('workstreamId')),
+      ownerId: validId(data.get('ownerId')) ?? user.id,
       createdById: user.id,
       eventId: event?.id,
     },
@@ -85,7 +99,7 @@ export async function updateSpeaker(id: string, data: FormData) {
   if (!speaker) return { error: 'Speaker not found.' };
   if (!allows(user, 'speakers:edit', speaker)) return { error: 'You cannot edit this speaker.' };
 
-  const status = String(data.get('status') ?? speaker.status);
+  const status = oneOf(data.get('status'), STATUSES.speaker, speaker.status as any);
   await db.speaker.update({
     where: { id },
     data: {
@@ -95,9 +109,9 @@ export async function updateSpeaker(id: string, data: FormData) {
       bio: data.get('bio') === 'on',
       registered: data.get('registered') === 'on',
       prepCallNeeded: data.get('prepCallNeeded') === 'on',
-      notes: String(data.get('notes') ?? '') || null,
-      topicFit: String(data.get('topicFit') ?? '') || null,
-      priority: String(data.get('priority') ?? '') || null,
+      notes: optionalText(data.get('notes'), BOUND.notes),
+      topicFit: optionalText(data.get('topicFit'), BOUND.shortText),
+      priority: oneOf(data.get('priority'), ['A', 'B', 'C', ''] as const, '') || null,
     },
   });
   await log(user.id, 'updated', 'speaker', `${speaker.name} → ${status}`, id);
@@ -117,8 +131,8 @@ export async function updateQuestion(id: string, data: FormData) {
   await db.openQuestion.update({
     where: { id },
     data: {
-      status: String(data.get('status') ?? q.status),
-      update: String(data.get('update') ?? '') || null,
+      status: oneOf(data.get('status'), STATUSES.question, q.status as any),
+      update: optionalText(data.get('update'), BOUND.notes),
     },
   });
   revalidatePath('/questions');
@@ -129,15 +143,15 @@ export async function createQuestion(data: FormData) {
   const user = await requireUser();
   if (scopeOf(user, 'questions:edit') === 'none') return { error: 'You cannot raise questions.' };
   const event = await db.event.findFirst({ where: { isCurrent: true } });
-  const question = String(data.get('question') ?? '').trim();
+  const question = text(data.get('question'), BOUND.shortText);
   if (!question) return { error: 'Write the question first.' };
 
   await db.openQuestion.create({
     data: {
       question,
-      update: String(data.get('update') ?? '') || null,
-      ownerId: String(data.get('ownerId') ?? '') || user.id,
-      workstreamId: String(data.get('workstreamId') ?? '') || null,
+      update: optionalText(data.get('update'), BOUND.notes),
+      ownerId: validId(data.get('ownerId')) ?? user.id,
+      workstreamId: validId(data.get('workstreamId')),
       eventId: event?.id,
     },
   });
@@ -153,11 +167,16 @@ export async function addRetroItem(data: FormData) {
   const event = await db.event.findFirst({ where: { isCurrent: true } });
   if (!event) return { error: 'No active cycle.' };
 
-  const text = String(data.get('text') ?? '').trim();
-  if (!text) return { error: 'Write something first.' };
+  const note = text(data.get('text'), BOUND.notes);
+  if (!note) return { error: 'Write something first.' };
 
   await db.retroItem.create({
-    data: { eventId: event.id, kind: String(data.get('kind') ?? 'plus'), text, authorId: user.id },
+    data: {
+      eventId: event.id,
+      kind: oneOf(data.get('kind'), STATUSES.retro, 'plus'),
+      text: note,
+      authorId: user.id,
+    },
   });
   revalidatePath('/retro');
   return { ok: true };
@@ -168,6 +187,7 @@ export async function addRetroItem(data: FormData) {
 export async function setPermission(roleId: string, capability: string, scope: string) {
   const user = await requireUser();
   if (!can(user, 'admin:permissions')) return { error: 'Only the President can change permissions.' };
+  if (!validId(roleId)) return { error: 'Role not found.' };
   if (!CAPABILITY_KEYS.includes(capability) || !SCOPES.includes(scope as any)) {
     return { error: 'Unknown permission.' };
   }
@@ -202,6 +222,7 @@ export async function setPermission(roleId: string, capability: string, scope: s
 export async function setUserRole(userId: string, roleId: string) {
   const actor = await requireUser();
   if (!can(actor, 'admin:roles')) return { error: 'You cannot change roles.' };
+  if (!validId(userId) || !validId(roleId)) return { error: 'Not found.' };
 
   const target = await db.user.findUnique({ where: { id: userId }, include: { role: true } });
   const role = await db.role.findUnique({ where: { id: roleId } });
@@ -228,7 +249,14 @@ export async function setUserActive(userId: string, active: boolean) {
   if (userId === actor.id) return { error: 'You cannot deactivate yourself.' };
 
   const target = await db.user.findUnique({ where: { id: userId } });
-  await db.user.update({ where: { id: userId }, data: { isActive: active } });
+  await db.user.update({
+    where: { id: userId },
+    data: {
+      isActive: active,
+      // Ends any session they already have open.
+      sessionEpoch: { increment: 1 },
+    },
+  });
   await db.auditLog.create({
     data: {
       actorId: actor.id,
@@ -244,10 +272,11 @@ export async function inviteUser(data: FormData) {
   const actor = await requireUser();
   if (!can(actor, 'admin:users')) return { error: 'You cannot invite members.' };
 
-  const email = String(data.get('email') ?? '').toLowerCase().trim();
-  const name = String(data.get('name') ?? '').trim();
-  const roleId = String(data.get('roleId') ?? '');
-  if (!email || !name || !roleId) return { error: 'Name, email and role are all needed.' };
+  const email = validEmail(data.get('email'));
+  const name = text(data.get('name'), BOUND.name);
+  const roleId = validId(data.get('roleId'));
+  if (!email) return { error: 'That does not look like an email address.' };
+  if (!name || !roleId) return { error: 'Name, email and role are all needed.' };
 
   const existing = await db.user.findUnique({ where: { email } });
   if (existing) return { error: 'That email already has an account.' };
@@ -259,13 +288,13 @@ export async function inviteUser(data: FormData) {
       name,
       email,
       passwordHash: await hashPassword(temp),
-      title: String(data.get('title') ?? '') || null,
-      company: String(data.get('company') ?? '') || null,
+      title: optionalText(data.get('title'), BOUND.title),
+      company: optionalText(data.get('company'), BOUND.name),
       roleId,
     },
   });
 
-  const workstreamIdsRaw = data.getAll('workstreams').map(String).filter(Boolean);
+  const workstreamIdsRaw = idList(data.getAll('workstreams'), 10);
   if (workstreamIdsRaw.length) {
     await db.membership.createMany({
       data: workstreamIdsRaw.map((workstreamId) => ({ userId: created.id, workstreamId })),
@@ -294,16 +323,16 @@ export async function updateEvent(data: FormData) {
   await db.event.update({
     where: { id: event.id },
     data: {
-      name: String(data.get('name') ?? event.name),
-      theme: String(data.get('theme') ?? '') || null,
-      dayOneTheme: String(data.get('dayOneTheme') ?? '') || null,
-      dayTwoTheme: String(data.get('dayTwoTheme') ?? '') || null,
-      venue: String(data.get('venue') ?? '') || null,
-      city: String(data.get('city') ?? '') || null,
-      startDate: data.get('startDate') ? new Date(String(data.get('startDate'))) : event.startDate,
-      endDate: data.get('endDate') ? new Date(String(data.get('endDate'))) : event.endDate,
-      goalRegistrants: Number(data.get('goalRegistrants') ?? event.goalRegistrants),
-      goalOrganizations: Number(data.get('goalOrganizations') ?? event.goalOrganizations),
+      name: text(data.get('name'), BOUND.title) || event.name,
+      theme: optionalText(data.get('theme'), BOUND.shortText),
+      dayOneTheme: optionalText(data.get('dayOneTheme'), BOUND.shortText),
+      dayTwoTheme: optionalText(data.get('dayTwoTheme'), BOUND.shortText),
+      venue: optionalText(data.get('venue'), BOUND.title),
+      city: optionalText(data.get('city'), BOUND.name),
+      startDate: validDate(data.get('startDate')) ?? event.startDate,
+      endDate: validDate(data.get('endDate')) ?? event.endDate,
+      goalRegistrants: wholeNumber(data.get('goalRegistrants'), 0, 100000, event.goalRegistrants),
+      goalOrganizations: wholeNumber(data.get('goalOrganizations'), 0, 10000, event.goalOrganizations),
     },
   });
   revalidatePath('/admin');
