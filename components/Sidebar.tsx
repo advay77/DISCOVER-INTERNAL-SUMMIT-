@@ -73,28 +73,3 @@ export function Sidebar({
     </aside>
   );
 }
-
-export function MobileNav({ nav }: { nav: NavEntry[] }) {
-  const path = usePathname();
-  return (
-    <nav className="sticky top-0 z-30 flex gap-1 overflow-x-auto border-b border-line bg-white px-3 py-2 lg:hidden">
-      {nav.map((item) => {
-        const active = path === item.href || path.startsWith(item.href + '/');
-        const Icon = NAV_ICONS[item.icon];
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={clsx(
-              'flex shrink-0 items-center gap-1.5 rounded-[4px] px-2.5 py-1.5 text-[12.5px] font-medium',
-              active ? 'bg-navy text-white' : 'text-ink-muted hover:bg-paper',
-            )}
-          >
-            <Icon size={14} />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}

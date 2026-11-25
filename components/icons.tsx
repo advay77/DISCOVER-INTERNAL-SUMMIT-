@@ -173,6 +173,14 @@ export const IconMoney = ({ size = 16, className }: P) => (
   </svg>
 );
 
+export const IconMore = ({ size = 16, className }: P) => (
+  <svg {...base(size, className)}>
+    <circle cx="5" cy="12" r="1.4" />
+    <circle cx="12" cy="12" r="1.4" />
+    <circle cx="19" cy="12" r="1.4" />
+  </svg>
+);
+
 export const IconPlus = ({ size = 16, className }: P) => (
   <svg {...base(size, className)}>
     <path d="M12 5.5v13M5.5 12h13" />

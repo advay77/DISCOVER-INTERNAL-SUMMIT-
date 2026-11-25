@@ -121,7 +121,7 @@ export default async function EventsPage({
         />
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="chip-row mb-4 flex flex-wrap gap-2">
         <Link
           href="/events"
           className={clsx(

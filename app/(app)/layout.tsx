@@ -1,6 +1,7 @@
 import { requireUser, can, scopeFilter } from '@/lib/authz';
 import { db } from '@/lib/db';
-import { Sidebar, MobileNav, type NavEntry } from '@/components/Sidebar';
+import { Sidebar, type NavEntry } from '@/components/Sidebar';
+import { MobileTabBar } from '@/components/MobileTabBar';
 import { Topbar } from '@/components/Topbar';
 import { dateRange } from '@/lib/format';
 
@@ -74,9 +75,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           unread={unread}
           roleName={user.role.name}
           canAdmin={can(user, 'admin:users') || can(user, 'admin:permissions') || can(user, 'admin:event')}
+          nav={nav}
         />
-        <MobileNav nav={nav} />
-        <main className="flex-1 px-4 py-6 lg:px-6">{children}</main>
+        {/* Bottom padding keeps the last row clear of the phone tab bar. */}
+        <main className="flex-1 px-3.5 pb-[calc(env(safe-area-inset-bottom)+84px)] pt-4 sm:px-5 lg:px-6 lg:pb-8 lg:pt-6">
+          {children}
+        </main>
+        <MobileTabBar nav={nav} />
       </div>
     </div>
   );

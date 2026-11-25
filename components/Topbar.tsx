@@ -2,25 +2,43 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Avatar } from './ui';
+import { Logo } from './Logo';
 import { IconSearch, IconBell, IconAdmin, IconTeam, IconChat } from './icons';
+import type { NavEntry } from './Sidebar';
 
 export function Topbar({
   user,
   unread,
   roleName,
   canAdmin,
+  nav,
 }: {
   user: { name: string; email: string; accent: string; title?: string | null; company?: string | null };
   unread: number;
   roleName: string;
   canAdmin: boolean;
+  nav: NavEntry[];
 }) {
   const [open, setOpen] = useState(false);
+  const path = usePathname();
+  // On a phone the header names the page, since there is no sidebar to show it.
+  const here = nav.find((n) => path === n.href || path.startsWith(n.href + '/'));
 
   return (
-    <header className="sticky top-0 z-20 flex h-[52px] items-center gap-3 border-b border-line bg-white/95 px-4 backdrop-blur lg:px-6">
-      <form action="/search" className="relative hidden max-w-sm flex-1 sm:block">
+    <header className="sticky top-0 z-30 flex h-[56px] items-center gap-2 border-b border-line bg-white/95 px-3.5 backdrop-blur sm:gap-3 sm:px-5 lg:h-[52px] lg:px-6">
+      {/* Phone and tablet: the mark and the page you are on. */}
+      <Link href="/dashboard" className="shrink-0 lg:hidden" aria-label="DISCOVER home">
+        <Logo tone="dark" size="sm" tagline={false} />
+      </Link>
+      {here && (
+        <span className="ml-1 hidden truncate border-l border-line pl-3 text-[14px] font-semibold text-ink min-[420px]:block lg:hidden">
+          {here.label}
+        </span>
+      )}
+
+      <form action="/search" className="relative hidden max-w-sm flex-1 lg:block">
         <IconSearch
           size={15}
           className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-faint"
@@ -33,11 +51,19 @@ export function Topbar({
         />
       </form>
 
-      <div className="flex-1 sm:hidden" />
+      <div className="flex-1 lg:hidden" />
+
+      <Link
+        href="/search"
+        className="flex h-10 w-10 items-center justify-center rounded-full text-ink-muted hover:bg-paper lg:hidden"
+        aria-label="Search"
+      >
+        <IconSearch size={19} />
+      </Link>
 
       <Link
         href="/chat"
-        className="relative flex h-8 w-8 items-center justify-center rounded-[4px] text-ink-muted hover:bg-paper hover:text-ink"
+        className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink-muted hover:bg-paper hover:text-ink lg:h-8 lg:w-8 lg:rounded-[4px]"
         aria-label={unread > 0 ? `${unread} unread messages` : 'Messages'}
       >
         <IconBell size={17} />
@@ -49,7 +75,7 @@ export function Topbar({
       <div className="relative">
         <button
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-2.5 rounded-[4px] py-1 pl-1 pr-2 hover:bg-paper"
+          className="flex min-h-[44px] items-center gap-2.5 rounded-[4px] py-1 pl-1 pr-1 hover:bg-paper lg:min-h-0 lg:pr-2"
         >
           <Avatar name={user.name} accent={user.accent} size={28} />
           <span className="hidden text-left sm:block">

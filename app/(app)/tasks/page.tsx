@@ -64,7 +64,7 @@ export default async function TasksPage({
         action={canEdit ? <NewTask workstreams={workstreams} people={people} /> : undefined}
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="chip-row mb-4 flex flex-wrap items-center gap-2">
         {filters.map((f) => {
           const active = (filter ?? '') === f.key;
           return (

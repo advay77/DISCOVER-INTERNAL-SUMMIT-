@@ -53,8 +53,8 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
   const canManage = can(user, 'admin:users');
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-11rem)] min-h-[26rem] max-w-[1400px] flex-col lg:h-[calc(100dvh-7.5rem)]">
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[236px_1fr] lg:gap-4">
+    <div className="chat-shell mx-auto flex max-w-[1400px] flex-col">
+      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-3 lg:grid-cols-[236px_1fr] lg:grid-rows-1 lg:gap-4">
         {/* Rail */}
         <aside className="card hidden min-h-0 flex-col overflow-hidden lg:flex">
           <div className="border-b border-line px-4 py-3">

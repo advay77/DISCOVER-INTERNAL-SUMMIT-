@@ -59,7 +59,7 @@ export default async function SpeakersPage({
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="chip-row mb-4 flex flex-wrap gap-2">
         <Link
           href="/speakers"
           className={
@@ -88,7 +88,45 @@ export default async function SpeakersPage({
       {speakers.length === 0 ? (
         <Empty title="No speakers in this view" />
       ) : (
-        <Card bodyClass="p-0 overflow-x-auto">
+        <>
+        {/* Phones: one card per speaker, no sideways scrolling. */}
+        <div className="space-y-2.5 sm:hidden">
+          {speakers.map((s: any) => (
+            <Link
+              key={s.id}
+              href={`/speakers/${s.id}`}
+              className="card block px-4 py-3.5 active:bg-paper"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold leading-snug text-ink">{s.name}</p>
+                  <p className="mt-0.5 text-[12.5px] leading-snug text-ink-muted">
+                    {s.title}
+                    {s.company ? ` · ${s.company}` : ''}
+                  </p>
+                </div>
+                <StatusPill status={s.status} />
+              </div>
+              {s.topicFit && (
+                <p className="mt-2 line-clamp-2 text-[12.5px] leading-snug text-ink-muted">{s.topicFit}</p>
+              )}
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <Pill tone={s.speakerType === 'Keynote' ? 'brand' : 'neutral'}>{s.speakerType}</Pill>
+                <Pill tone={s.bio ? 'ok' : 'neutral'}>Bio</Pill>
+                <Pill tone={s.headshot ? 'ok' : 'neutral'}>Photo</Pill>
+                {s.prepCallNeeded && <Pill tone="warn">Prep call</Pill>}
+                {s.owner && (
+                  <span className="ml-auto flex items-center gap-1.5 text-[11.5px] text-ink-faint">
+                    <Avatar name={s.owner.name} accent={s.owner.accent} size={20} />
+                    {s.owner.name.split(' ')[0]}
+                  </span>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        <Card bodyClass="p-0 overflow-x-auto" className="hidden sm:block">
           <table className="w-full min-w-[980px]">
             <thead className="border-b border-line bg-paper">
               <tr>
@@ -145,6 +183,7 @@ export default async function SpeakersPage({
             </tbody>
           </table>
         </Card>
+        </>
       )}
 
       {!canSeeContact && (

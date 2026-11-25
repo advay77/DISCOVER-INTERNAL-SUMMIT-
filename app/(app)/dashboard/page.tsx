@@ -93,37 +93,38 @@ export default async function Dashboard() {
   return (
     <div className="mx-auto max-w-[1340px] space-y-5">
       {/* Hero — a masthead, not a gradient card */}
-      <section className="rounded-card bg-navy-900 px-5 py-6 text-white sm:px-6 sm:py-7 lg:px-9 lg:py-9">
+      <section className="rounded-card bg-navy-900 px-4 py-5 text-white sm:px-6 sm:py-7 lg:px-9 lg:py-9">
         <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
           <div className="min-w-0">
             <p className="text-2xs font-semibold uppercase tracking-label text-brass">
               {event?.theme ?? 'Current cycle'}
             </p>
-            <h1 className="display mt-3 text-[30px] leading-[1.05] sm:text-[38px] lg:text-[46px]">
+            <h1 className="display mt-2 text-[26px] leading-[1.05] sm:mt-3 sm:text-[38px] lg:text-[46px]">
               {event?.name ?? 'No active cycle'}
             </h1>
             {event && (
-              <p className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-[13px] text-white/55">
+              <p className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-white/55 sm:mt-4 sm:gap-x-6 sm:text-[13px]">
                 <span>{dateRange(event.startDate, event.endDate)}</span>
                 <span className="hidden h-3 w-px bg-white/20 sm:block" />
                 <span>{event.city}</span>
                 <span className="hidden h-3 w-px bg-white/20 sm:block" />
-                <span>
+                <span className="hidden sm:inline">
                   Day 1 {event.dayOneTheme} · Day 2 {event.dayTwoTheme}
                 </span>
               </p>
             )}
             {event?.venue === 'To be confirmed' && (
-              <p className="mt-4 inline-flex items-center gap-2 border-l-2 border-brass bg-white/[0.06] py-1.5 pl-3 pr-4 text-[12.5px] text-white/80">
-                Dates and venue are not confirmed. Set them in Admin → Event.
+              <p className="mt-3 inline-flex items-center gap-2 border-l-2 border-brass bg-white/[0.06] py-1.5 pl-3 pr-4 text-[12px] text-white/80 sm:mt-4 sm:text-[12.5px]">
+                <span className="sm:hidden">Dates and venue not confirmed yet.</span>
+                <span className="hidden sm:inline">Dates and venue are not confirmed. Set them in Admin → Event.</span>
               </p>
             )}
           </div>
 
           {/* Countdown as one typographic line */}
-          <div className="flex w-full items-stretch gap-6 border-t border-white/12 pt-5 sm:w-auto sm:gap-8 sm:border-l sm:border-t-0 sm:pl-8 sm:pt-0">
+          <div className="flex w-full items-stretch gap-6 border-t border-white/12 pt-4 sm:w-auto sm:gap-8 sm:border-l sm:border-t-0 sm:pl-8 sm:pt-0">
             <div>
-              <p className="display text-[38px] leading-none sm:text-[46px]">
+              <p className="display text-[32px] leading-none sm:text-[46px]">
                 {countdown >= 0 ? countdown : Math.abs(countdown)}
               </p>
               <p className="mt-2 text-[11px] uppercase tracking-label text-white/40">
@@ -131,7 +132,7 @@ export default async function Dashboard() {
               </p>
             </div>
             <div className="border-l border-white/12 pl-6 sm:pl-8">
-              <p className="display text-[38px] leading-none sm:text-[46px]">{progress}%</p>
+              <p className="display text-[32px] leading-none sm:text-[46px]">{progress}%</p>
               <p className="mt-2 text-[11px] uppercase tracking-label text-white/40">
                 {scope === 'own' ? 'Your tasks done' : 'Cycle complete'}
               </p>
@@ -160,7 +161,7 @@ export default async function Dashboard() {
         <Card
           title={scope === 'own' ? 'Your tasks' : 'On your plate'}
           action={
-            <Link href="/tasks?filter=mine" className="text-[13px] font-semibold text-brand hover:underline">
+            <Link href="/tasks?filter=mine" className="inline-flex min-h-[40px] items-center text-[13px] font-semibold text-brand hover:underline lg:min-h-0">
               View all →
             </Link>
           }
@@ -184,7 +185,9 @@ export default async function Dashboard() {
                     <span className="block truncate text-sm font-medium text-ink">{t.title}</span>
                     <span className="text-[12px] text-ink-faint">{t.category}</span>
                   </span>
-                  <StatusPill status={t.status} />
+                  <span className="hidden sm:inline-flex">
+                    <StatusPill status={t.status} />
+                  </span>
                   <Pill tone={due.tone}>{due.text}</Pill>
                 </Link>
               );
@@ -261,7 +264,7 @@ export default async function Dashboard() {
           <Card
             title="Open questions"
             action={
-              <Link href="/questions" className="text-[13px] font-semibold text-brand hover:underline">
+              <Link href="/questions" className="inline-flex min-h-[40px] items-center text-[13px] font-semibold text-brand hover:underline lg:min-h-0">
                 All →
               </Link>
             }
@@ -289,7 +292,7 @@ export default async function Dashboard() {
         <Card
           title="What is coming up"
           action={
-            <Link href="/events" className="text-[13px] font-semibold text-brand hover:underline">
+            <Link href="/events" className="inline-flex min-h-[40px] items-center text-[13px] font-semibold text-brand hover:underline lg:min-h-0">
               All events →
             </Link>
           }
@@ -332,7 +335,7 @@ export default async function Dashboard() {
         <Card
           title="Recent communications"
           action={
-            <Link href="/chat" className="text-[13px] font-semibold text-brand hover:underline">
+            <Link href="/chat" className="inline-flex min-h-[40px] items-center text-[13px] font-semibold text-brand hover:underline lg:min-h-0">
               Open chat →
             </Link>
           }

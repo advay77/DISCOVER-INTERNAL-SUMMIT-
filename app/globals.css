@@ -94,3 +94,52 @@ h3 {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* ---------------------------------------------------------------- touch */
+
+@media (max-width: 1023px) {
+  /* Thumb-sized targets on phones and tablets. */
+  .btn {
+    min-height: 44px;
+  }
+  .btn-sm {
+    min-height: 40px;
+  }
+  /* Under 16px, iOS Safari zooms the whole page when a field is focused. */
+  .input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 639px) {
+  /* Filter chips scroll in one line instead of wrapping into a wall. */
+  .chip-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: -0.875rem;
+    padding-inline: 0.875rem;
+    scrollbar-width: none;
+  }
+  .chip-row::-webkit-scrollbar {
+    display: none;
+  }
+  .chip-row > * {
+    flex-shrink: 0;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* The chat fills the screen exactly: header and page padding above, the
+   phone tab bar (and the iPhone home indicator) below. */
+.chat-shell {
+  height: calc(100dvh - 156px - env(safe-area-inset-bottom));
+  min-height: 24rem;
+}
+@media (min-width: 1024px) {
+  .chat-shell {
+    height: calc(100dvh - 7rem);
+  }
+}
