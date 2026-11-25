@@ -165,6 +165,21 @@ Communication is scoped like everything else:
 
 The brief led with access, so it is specified first and enforced at the data layer.
 
+### 5.0 The rule
+
+DISCOVER's own instruction: **everyone can see everyone's work.** Twenty-odd
+people already share three spreadsheets, so hiding the programme from each
+other helps nobody. Visibility is open by default.
+
+**Finance is the single exception.** The sixth workstream — budget, vendor
+amounts, sponsorship income — is led by the Treasurer and open to the board
+only. It is marked `restricted` on the workstream itself, so its tasks, open
+questions, vendors, sponsors and channel disappear for anyone without
+`finance:view`, enforced in one place rather than remembered per page.
+
+Control is separate from visibility: everyone reads, editing follows who owns
+the work, and Admin stays with the President and officers.
+
 ### 5.1 Roles
 
 | Level | Role | Posture |
@@ -173,7 +188,7 @@ The brief led with access, so it is specified first and enforced at the data lay
 | 2 | **Officer** | Board-wide visibility including money and PII. Cannot change permissions |
 | 3 | **Board Director** | Reads across the organisation, writes in own workstreams, no money |
 | 4 | **Workstream Lead** | Full control of one workstream, read-only elsewhere, speaker contacts only for speakers they own |
-| 5 | **Volunteer** | Their own tasks, the run of show, their channels, files for their workstream, the retro. Nothing else |
+| 5 | **Volunteer** | The whole programme — tasks, speakers, agenda, sponsors, attendees, files, retro. They edit their own work, and Finance is closed to them |
 
 ### 5.2 Capabilities
 

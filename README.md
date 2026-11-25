@@ -71,6 +71,9 @@ The fastest way to test the access model is to sign in as these four in turn:
 One file decides everything: [`lib/authz.ts`](lib/authz.ts), over the capability catalogue in
 [`lib/capabilities.ts`](lib/capabilities.ts).
 
+- Everyone sees everyone's work. **Finance is the one exception** — that
+  workstream is marked `restricted`, so its tasks, questions, vendors, sponsors
+  and channel are invisible to anyone outside the board.
 - Every permission is `resource:action` with a scope of `all` / `workstream` / `own` / `none`.
 - `scopeFilter()` narrows the database query **before** it runs.
 - `redact()` strips gated fields from the payload server-side — a hidden field is genuinely
