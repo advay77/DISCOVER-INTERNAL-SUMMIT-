@@ -16,14 +16,14 @@ export default async function FilesPage({
   const { folder } = await searchParams;
 
   const files = await db.fileAsset.findMany({
-    where: folder ? { folder } : {},
+    where: folder ? { folder, status: 'ready' } : { status: 'ready' },
     orderBy: { createdAt: 'desc' },
     include: { uploader: true },
     take: 200,
   });
 
   const counts: Record<string, number> = {};
-  for (const f of FOLDERS) counts[f] = await db.fileAsset.count({ where: { folder: f } });
+  for (const f of FOLDERS) counts[f] = await db.fileAsset.count({ where: { folder: f, status: 'ready' } });
 
   return (
     <div className="mx-auto max-w-[1180px]">

@@ -141,7 +141,7 @@ export async function POST(req: Request) {
   // Attach uploads the author just made, then re-read so the reply carries them.
   if (attachments.length) {
     await db.fileAsset.updateMany({
-      where: { id: { in: attachments }, uploaderId: user.id, messageId: null },
+      where: { id: { in: attachments }, uploaderId: user.id, messageId: null, status: 'ready' },
       data: { messageId: message.id },
     });
     message.files = await db.fileAsset.findMany({

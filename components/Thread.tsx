@@ -6,6 +6,7 @@ import { Avatar } from './ui';
 import { Attachment, type Attached } from './Attachment';
 import { clockTime, relativeTime } from '@/lib/format';
 import { IconPlus, IconFiles } from './icons';
+import { uploadFile } from '@/lib/upload';
 
 export type ChatMessage = {
   id: string;
@@ -51,6 +52,7 @@ export function Thread({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{ name: string; fraction: number } | null>(null);
   const [dragging, setDragging] = useState(false);
   const [recording, setRecording] = useState(false);
   const [pickerFor, setPickerFor] = useState<string | null>(null);
@@ -104,23 +106,23 @@ export function Thread({
     setError(null);
     try {
       for (const file of list) {
-        const fd = new FormData();
-        fd.append('file', file);
-        fd.append('folder', 'Chat');
-        const res = await fetch('/api/files', { method: 'POST', body: fd });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          setError(data.error ?? `${file.name} could not be uploaded.`);
-          continue;
+        try {
+          setProgress({ name: file.name, fraction: 0 });
+          const done = await uploadFile(file, {
+            folder: 'Chat',
+            onProgress: (fraction) => setProgress({ name: file.name, fraction }),
+          });
+          setPendingFiles((p) => [
+            ...p,
+            { id: done.id, name: done.name, mime: done.mime || file.type || 'application/octet-stream', size: done.size },
+          ]);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : `${file.name} could not be uploaded.`);
         }
-        const data = await res.json();
-        setPendingFiles((p) => [
-          ...p,
-          { id: data.file.id, name: data.file.name, mime: file.type || 'application/octet-stream', size: file.size },
-        ]);
       }
     } finally {
       setUploading(false);
+      setProgress(null);
     }
   }
 
@@ -143,17 +145,17 @@ export function Thread({
         const blob = new Blob(chunks.current, { type: 'audio/webm' });
         const ms = Date.now() - startedAt.current;
         if (blob.size < 800) return;
-        const fd = new FormData();
-        fd.append('file', new File([blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' }));
-        fd.append('folder', 'Chat');
-        fd.append('durationMs', String(ms));
-        const res = await fetch('/api/files', { method: 'POST', body: fd });
-        if (res.ok) {
-          const data = await res.json();
+        try {
+          const done = await uploadFile(
+            new File([blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' }),
+            { folder: 'Chat', durationMs: ms },
+          );
           setPendingFiles((p) => [
             ...p,
-            { id: data.file.id, name: 'Voice note', mime: 'audio/webm', size: blob.size, durationMs: ms },
+            { id: done.id, name: 'Voice note', mime: 'audio/webm', size: done.size, durationMs: ms },
           ]);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'The voice note could not be uploaded.');
         }
       };
       recorder.current = rec;
@@ -384,6 +386,18 @@ export function Thread({
                 </button>
               </span>
             ))}
+          </div>
+        )}
+
+        {progress && (
+          <div className="mb-2">
+            <div className="flex items-center justify-between text-[11.5px] text-ink-muted">
+              <span className="truncate">Uploading {progress.name}</span>
+              <span className="tabular-nums">{Math.round(progress.fraction * 100)}%</span>
+            </div>
+            <div className="mt-1 h-[3px] w-full bg-line">
+              <div className="h-full bg-brand transition-all" style={{ width: `${progress.fraction * 100}%` }} />
+            </div>
           </div>
         )}
 

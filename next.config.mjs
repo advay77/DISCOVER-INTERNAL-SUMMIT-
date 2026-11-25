@@ -11,14 +11,25 @@
  */
 const isDev = process.env.NODE_ENV === 'development';
 
+// Files live in Supabase Storage: the browser uploads to it directly and loads
+// images, video and audio from short-lived links on it. Only this one project
+// origin is allowed — never a wildcard over every Supabase project.
+let storageOrigin = '';
+try {
+  storageOrigin = process.env.SUPABASE_URL ? new URL(process.env.SUPABASE_URL).origin : '';
+} catch {
+  storageOrigin = '';
+}
+const storage = storageOrigin ? ` ${storageOrigin}` : '';
+
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
-  "img-src 'self' data: blob:",
-  "media-src 'self' blob:",
-  "connect-src 'self'" + (isDev ? ' ws: http://localhost:*' : ''),
+  `img-src 'self' data: blob:${storage}`,
+  `media-src 'self' blob:${storage}`,
+  `connect-src 'self'${storage}` + (isDev ? ' ws: http://localhost:*' : ''),
   "frame-ancestors 'none'",
   "form-action 'self'",
   "base-uri 'self'",

@@ -2,18 +2,19 @@ import { NextResponse } from 'next/server';
 import { currentUser } from '@/lib/auth';
 import { can } from '@/lib/authz';
 import { db } from '@/lib/db';
-import { getFile } from '@/lib/storage';
+import { getFile, signDownload, INLINE_SAFE } from '@/lib/storage';
 import { id as validId } from '@/lib/validate';
 
 /**
- * Files are never public URLs — every read is permission-checked.
+ * Files are never public URLs — every read is permission-checked here first.
  *
- * Only media the browser can render safely is served inline. Everything else
- * downloads, and the stored type is replaced with a neutral one, so a file that
- * claims to be HTML can never execute on this origin.
+ * Supabase-backed files: the app checks permission, then redirects to a link
+ * that works for two minutes. The bytes come straight from storage, so the
+ * host's response-size limit does not apply either.
+ *
+ * Local files: streamed from here, with only safe media rendered inline and
+ * everything else forced to download under a sandboxed policy.
  */
-const INLINE_SAFE = /^(image\/(png|jpe?g|gif|webp|avif)|video\/(mp4|webm|ogg)|audio\/(mpeg|ogg|wav|webm)|application\/pdf)$/i;
-
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
@@ -23,22 +24,34 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!validId(id)) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
   const asset = await db.fileAsset.findUnique({ where: { id } });
-  if (!asset) return NextResponse.json({ error: 'not found' }, { status: 404 });
+  if (!asset || asset.status !== 'ready') {
+    return NextResponse.json({ error: 'not found' }, { status: 404 });
+  }
+
+  const inline = INLINE_SAFE.test(asset.mime);
+
+  if (asset.backend === 'supabase') {
+    try {
+      const url = await signDownload(asset.path, asset.name, inline);
+      return NextResponse.redirect(url, {
+        status: 302,
+        headers: { 'cache-control': 'private, no-store' },
+      });
+    } catch (e) {
+      console.error('[files/get]', e);
+      return NextResponse.json({ error: 'file unavailable' }, { status: 502 });
+    }
+  }
 
   try {
     const bytes = await getFile(asset);
-    const inline = INLINE_SAFE.test(asset.mime);
-
-    // The filename is quoted and stripped so it cannot break out of the header.
     const safeName = asset.name.replace(/["\\\r\n]/g, '_');
-
     return new NextResponse(new Uint8Array(bytes), {
       headers: {
         'content-type': inline ? asset.mime : 'application/octet-stream',
         'content-disposition': `${inline ? 'inline' : 'attachment'}; filename="${safeName}"`,
         'cache-control': 'private, max-age=300',
         'x-content-type-options': 'nosniff',
-        // An uploaded file never gets to run anything on this origin.
         'content-security-policy': "default-src 'none'; sandbox",
       },
     });

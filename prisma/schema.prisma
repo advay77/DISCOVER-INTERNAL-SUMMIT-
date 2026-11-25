@@ -412,8 +412,14 @@ model FileAsset {
   size       Int
   folder     String   @default("General")
   durationMs Int?
-  /// Set when the file is stored in the database (hosted deploys with no
-  /// writable disk). Null when it lives under storage/ on local disk.
+  /// Where the bytes live: disk (local development), db (legacy, in this row)
+  /// or supabase (Supabase Storage — the hosted default, uploaded directly from
+  /// the browser so no size limit of the app host applies).
+  backend    String   @default("disk")
+  /// pending until a direct upload is confirmed; only ready files can be
+  /// attached or downloaded.
+  status     String   @default("ready")
+  /// Set only for the legacy db backend.
   data       Bytes?
   uploaderId String?
   uploader   User?    @relation(fields: [uploaderId], references: [id])
