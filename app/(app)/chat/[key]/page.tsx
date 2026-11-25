@@ -4,7 +4,6 @@ import clsx from 'clsx';
 import { requireCan, can } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { Thread } from '@/components/Thread';
-import { Huddle } from '@/components/Huddle';
 import { Avatar } from '@/components/ui';
 import { NewChannel, ChannelMembers } from '@/components/ChannelAdmin';
 import { BrowseChannels } from '@/components/BrowseChannels';
@@ -173,11 +172,11 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
             </div>
           </header>
 
-          <Huddle channelId={channel.id} meId={user.id} channelName={channel.name} />
-
           <Thread
             channelId={channel.id}
             meId={user.id}
+            meName={user.name}
+            meAccent={user.accent}
             placeholder={`Message #${channel.name}`}
             emptyHint={
               channel.purpose

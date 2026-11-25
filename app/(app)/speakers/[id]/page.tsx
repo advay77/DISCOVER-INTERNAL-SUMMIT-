@@ -104,6 +104,8 @@ export default async function SpeakerDetail({ params }: { params: Promise<{ id: 
             entityType="speaker"
             entityId={speaker.id}
             meId={user.id}
+            meName={user.name}
+            meAccent={user.accent}
             compact
             placeholder="Add an outreach update…"
             emptyHint="No notes yet. Record what they said, so the next owner knows."

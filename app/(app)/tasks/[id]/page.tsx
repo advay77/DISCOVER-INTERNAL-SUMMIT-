@@ -95,6 +95,8 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
             entityType="task"
             entityId={task.id}
             meId={user.id}
+            meName={user.name}
+            meAccent={user.accent}
             compact
             placeholder="Add an update…"
             emptyHint="No discussion yet. Say what is blocking or what changed."

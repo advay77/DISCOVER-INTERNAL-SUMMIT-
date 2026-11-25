@@ -1,31 +1,32 @@
-// Clears artifacts created while verifying by hand, back to seed state.
+// Clears anything created while verifying by hand.
 import { PrismaClient } from '@prisma/client';
 import { unlink } from 'node:fs/promises';
 import path from 'node:path';
 
 const db = new PrismaClient();
 
-const msgs = await db.message.findMany({
-  where: { OR: [{ body: { contains: 'Floorplan draft for Day 1' } }, { body: { contains: 'Testing the thread' } }] },
-  include: { files: true },
-});
+const msgs = await db.message.findMany({ include: { files: true } });
+let files = 0;
 for (const m of msgs) {
   for (const f of m.files) {
     await unlink(path.join(process.cwd(), 'storage', f.path)).catch(() => {});
-    await db.fileAsset.delete({ where: { id: f.id } });
+    files++;
   }
-  await db.reaction.deleteMany({ where: { messageId: m.id } });
-  await db.message.delete({ where: { id: m.id } });
+}
+await db.reaction.deleteMany();
+await db.fileAsset.deleteMany();
+await db.message.deleteMany();
+
+// channels that are not part of the seeded set
+const KEEP = ['general','speakers','volunteers','random','board','finance','summit','partnerships','comms','academic','professional-dev'];
+const extra = await db.channel.findMany({ where: { key: { notIn: KEEP } } });
+for (const c of extra) {
+  await db.channelMember.deleteMany({ where: { channelId: c.id } });
+  await db.channel.delete({ where: { id: c.id } });
 }
 
-const orphans = await db.fileAsset.findMany({ where: { folder: 'Chat', messageId: null } });
-for (const f of orphans) {
-  await unlink(path.join(process.cwd(), 'storage', f.path)).catch(() => {});
-  await db.fileAsset.delete({ where: { id: f.id } });
-}
+await db.activityLog.deleteMany();
+await db.auditLog.deleteMany();
 
-await db.callParticipant.deleteMany();
-await db.callSignal.deleteMany();
-
-console.log(`cleared ${msgs.length} test messages, ${orphans.length} orphan uploads`);
+console.log(`cleared ${msgs.length} messages, ${files} files, ${extra.length} test channels`);
 await db.$disconnect();

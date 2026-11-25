@@ -17,38 +17,38 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ]);
 
   const nav: NavEntry[] = [
-    { href: '/dashboard', label: 'Dashboard', icon: 'dashboard', group: 'Overview' },
+    { href: '/dashboard', label: 'Dashboard', icon: 'dashboard', group: '' },
     ...(can(user, 'tasks:view')
-      ? [{ href: '/tasks', label: 'Tasks', icon: 'tasks' as const, badge: openTasks, group: 'Overview' }]
+      ? [{ href: '/tasks', label: 'Tasks', icon: 'tasks' as const, badge: openTasks, group: '' }]
       : []),
     ...(can(user, 'questions:view')
-      ? [{ href: '/questions', label: 'Open questions', icon: 'questions' as const, group: 'Overview' }]
+      ? [{ href: '/questions', label: 'Questions', icon: 'questions' as const, group: '' }]
       : []),
 
     ...(can(user, 'speakers:view')
-      ? [{ href: '/speakers', label: 'Speakers', icon: 'speakers' as const, group: 'The summit' }]
+      ? [{ href: '/speakers', label: 'Speakers', icon: 'speakers' as const, group: 'Summit' }]
       : []),
     ...(can(user, 'agenda:view')
-      ? [{ href: '/agenda', label: 'Run of show', icon: 'agenda' as const, group: 'The summit' }]
+      ? [{ href: '/agenda', label: 'Run of show', icon: 'agenda' as const, group: 'Summit' }]
       : []),
     ...(can(user, 'sponsors:view')
-      ? [{ href: '/sponsors', label: 'Sponsors', icon: 'sponsors' as const, group: 'The summit' }]
+      ? [{ href: '/sponsors', label: 'Sponsors', icon: 'sponsors' as const, group: 'Summit' }]
       : []),
     ...(can(user, 'vendors:view')
-      ? [{ href: '/logistics', label: 'Logistics', icon: 'logistics' as const, group: 'The summit' }]
+      ? [{ href: '/logistics', label: 'Logistics', icon: 'logistics' as const, group: 'Summit' }]
       : []),
     ...(can(user, 'attendees:view')
-      ? [{ href: '/attendees', label: 'Attendees', icon: 'attendees' as const, group: 'The summit' }]
+      ? [{ href: '/attendees', label: 'Attendees', icon: 'attendees' as const, group: 'Summit' }]
       : []),
 
     ...(can(user, 'chat:use')
-      ? [{ href: '/chat', label: 'Messages', icon: 'chat' as const, badge: unread, group: 'People' }]
+      ? [{ href: '/chat', label: 'Messages', icon: 'chat' as const, badge: unread, group: '' }]
       : []),
-    ...(can(user, 'files:view') ? [{ href: '/files', label: 'Files', icon: 'files' as const, group: 'People' }] : []),
-    ...(can(user, 'team:view') ? [{ href: '/team', label: 'Team', icon: 'team' as const, group: 'People' }] : []),
-    ...(can(user, 'retro:view') ? [{ href: '/retro', label: 'Retro', icon: 'retro' as const, group: 'People' }] : []),
+    ...(can(user, 'files:view') ? [{ href: '/files', label: 'Files', icon: 'files' as const, group: 'Organisation' }] : []),
+    ...(can(user, 'team:view') ? [{ href: '/team', label: 'Team', icon: 'team' as const, group: 'Organisation' }] : []),
+    ...(can(user, 'retro:view') ? [{ href: '/retro', label: 'Retro', icon: 'retro' as const, group: 'Organisation' }] : []),
     ...(can(user, 'admin:users') || can(user, 'admin:permissions')
-      ? [{ href: '/admin', label: 'Admin & access', icon: 'admin' as const, group: 'People' }]
+      ? [{ href: '/admin', label: 'Admin', icon: 'admin' as const, group: 'Organisation' }]
       : []),
   ];
 

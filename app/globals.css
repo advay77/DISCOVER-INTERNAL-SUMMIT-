@@ -58,7 +58,7 @@ h3 {
   }
 
   .nav-item {
-    @apply relative flex items-center gap-2.5 border-l-2 border-transparent py-[7px] pl-3 pr-2 text-[13px] font-medium text-white/60 transition hover:border-white/30 hover:text-white;
+    @apply relative flex items-center gap-2.5 border-l-2 border-transparent py-[5px] pl-3 pr-2 text-[12.5px] font-medium text-white/55 transition hover:border-white/25 hover:text-white;
   }
   .nav-item-active {
     @apply border-brass bg-white/[0.06] font-semibold text-white hover:border-brass hover:text-white;

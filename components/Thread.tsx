@@ -14,6 +14,8 @@ export type ChatMessage = {
   author: { id: string; name: string; accent: string; title?: string | null };
   files?: Attached[];
   reactions?: { emoji: string; userId: string }[];
+  /** Shown while the server has not confirmed it yet. */
+  pending?: boolean;
 };
 
 type Props = {
@@ -21,6 +23,8 @@ type Props = {
   entityType?: string;
   entityId?: string;
   meId: string;
+  meName: string;
+  meAccent: string;
   placeholder?: string;
   compact?: boolean;
   emptyHint?: string;
@@ -28,11 +32,15 @@ type Props = {
 
 const QUICK = ['👍', '✅', '🙌', '👀', '🎉', '❓'];
 
+const data_messages = (d: { messages?: ChatMessage[] }) => d.messages ?? [];
+
 export function Thread({
   channelId,
   entityType,
   entityId,
   meId,
+  meName,
+  meAccent,
   placeholder = 'Write a message',
   compact = false,
   emptyHint,
@@ -61,8 +69,13 @@ export function Thread({
     try {
       const res = await fetch(`/api/messages?${query}`, { cache: 'no-store' });
       if (!res.ok) return;
-      const data = await res.json();
-      setMessages(data.messages ?? []);
+      const incoming: ChatMessage[] = data_messages(await res.json());
+      setMessages((current) => {
+        const seen = new Set(incoming.map((m) => m.id));
+        const pendingLocal = current.filter((m) => !seen.has(m.id) && m.id.startsWith('local-'));
+        const confirmed = new Set(incoming.map((m) => m.body + m.author.id));
+        return [...incoming, ...pendingLocal.filter((m) => !confirmed.has(m.body + m.author.id))];
+      });
     } finally {
       setLoading(false);
     }
@@ -72,7 +85,7 @@ export function Thread({
     firstLoad.current = true;
     setLoading(true);
     load();
-    const t = setInterval(load, 3000);
+    const t = setInterval(load, 2000);
     return () => clearInterval(t);
   }, [load]);
 
@@ -156,23 +169,51 @@ export function Thread({
   async function send(e?: React.FormEvent) {
     e?.preventDefault();
     const body = value.trim();
-    if ((!body && pendingFiles.length === 0) || sending) return;
+    const attached = pendingFiles;
+    if ((!body && attached.length === 0) || sending) return;
+
     setSending(true);
+    setError(null);
     setValue('');
-    const fileIds = pendingFiles.map((f) => f.id);
     setPendingFiles([]);
+
+    // Show it at once, so the box never looks like it swallowed the message.
+    const optimisticId = `local-${Date.now()}`;
+    setMessages((m) => [
+      ...m,
+      {
+        id: optimisticId,
+        body,
+        createdAt: new Date().toISOString(),
+        author: { id: meId, name: meName, accent: meAccent },
+        files: attached,
+        reactions: [],
+        pending: true,
+      },
+    ]);
+
     try {
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ channelId, entityType, entityId, body, fileIds }),
+        body: JSON.stringify({ channelId, entityType, entityId, body, fileIds: attached.map((f) => f.id) }),
       });
+
       if (res.ok) {
         const data = await res.json();
-        setMessages((m) => [...m, data.message]);
+        setMessages((m) => m.map((x) => (x.id === optimisticId ? data.message : x)));
       } else {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error ?? 'That message did not send. Try again.');
+        setMessages((m) => m.filter((x) => x.id !== optimisticId));
         setValue(body);
+        setPendingFiles(attached);
       }
+    } catch {
+      setError('No connection. The message was not sent.');
+      setMessages((m) => m.filter((x) => x.id !== optimisticId));
+      setValue(body);
+      setPendingFiles(attached);
     } finally {
       setSending(false);
     }
@@ -209,8 +250,8 @@ export function Thread({
       <div
         className={clsx(
           compact
-            ? 'max-h-80 flex-1 space-y-4 overflow-y-auto pr-1'
-            : 'flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5',
+            ? 'max-h-80 flex-1 space-y-1 overflow-y-auto pr-1'
+            : 'flex-1 space-y-1 overflow-y-auto px-4 py-4 sm:px-5',
           dragging && 'bg-brand-50',
         )}
       >
@@ -236,14 +277,30 @@ export function Thread({
           }
 
           return (
-            <div key={m.id} className={clsx('group relative flex gap-3', grouped && 'pl-[42px]')}>
+            <div
+              key={m.id}
+              className={clsx(
+                'group relative flex gap-3 rounded-[4px] px-2 py-1 -mx-2 transition hover:bg-paper',
+                grouped && 'pl-[50px]',
+                m.pending && 'opacity-60',
+              )}
+            >
               {!grouped && <Avatar name={m.author.name} accent={m.author.accent} size={30} />}
+
+              {/* A grouped message still shows its own time on hover, so it is
+                  never mistaken for part of the one above. */}
+              {grouped && (
+                <span className="absolute left-2 top-1.5 hidden w-[36px] text-right text-[10.5px] text-ink-faint group-hover:block">
+                  {clockTime(m.createdAt)}
+                </span>
+              )}
 
               <div className="min-w-0 flex-1">
                 {!grouped && (
                   <div className="flex items-baseline gap-2">
                     <span className="text-[13px] font-semibold text-ink">{m.author.name}</span>
                     <span className="text-[11px] text-ink-faint">{clockTime(m.createdAt)}</span>
+                    {m.pending && <span className="text-[10.5px] text-ink-faint">sending…</span>}
                   </div>
                 )}
 

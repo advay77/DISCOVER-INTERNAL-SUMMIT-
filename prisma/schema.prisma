@@ -72,7 +72,6 @@ model User {
   auditEntries    AuditLog[]
   retroItems      RetroItem[]
   reactions       Reaction[]
-  calls           CallParticipant[]
 }
 
 model Workstream {
@@ -329,7 +328,6 @@ model Channel {
   createdAt    DateTime    @default(now())
   members      ChannelMember[]
   messages     Message[]
-  callers      CallParticipant[]
 }
 
 model ChannelMember {
@@ -341,35 +339,6 @@ model ChannelMember {
   lastReadAt DateTime @default(now())
 
   @@unique([channelId, userId])
-}
-
-// ---- huddles: a live voice room attached to a channel -------------------
-
-model CallParticipant {
-  id        String   @id @default(cuid())
-  channelId String
-  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  muted     Boolean  @default(false)
-  joinedAt  DateTime @default(now())
-  heartbeat DateTime @default(now())
-
-  @@unique([channelId, userId])
-  @@index([channelId, heartbeat])
-}
-
-/// WebRTC signalling, delivered by polling. Rows are consumed once read.
-model CallSignal {
-  id        String   @id @default(cuid())
-  channelId String
-  fromId    String
-  toId      String
-  kind      String // offer | answer | ice | bye
-  payload   String
-  createdAt DateTime @default(now())
-
-  @@index([channelId, toId, createdAt])
 }
 
 model Reaction {

@@ -21,7 +21,7 @@ export function Sidebar({
   const groups = Array.from(new Set(nav.map((n) => n.group)));
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[214px] shrink-0 flex-col bg-navy-900 lg:flex">
+    <aside className="sticky top-0 hidden h-screen w-[202px] shrink-0 flex-col bg-navy-900 lg:flex">
       <div className="border-b border-white/10 px-5 pb-5 pt-6">
         <Link href="/dashboard">
           <Logo tone="light" size="md" />
@@ -30,10 +30,12 @@ export function Sidebar({
 
       <nav className="flex-1 overflow-y-auto py-4 pl-2 pr-3">
         {groups.map((group, gi) => (
-          <div key={group} className={gi > 0 ? 'mt-5' : ''}>
-            <p className="mb-1.5 pl-3 text-2xs font-semibold uppercase tracking-label text-white/30">
-              {group}
-            </p>
+          <div key={group || 'top'} className={gi > 0 ? 'mt-4 border-t border-white/[0.07] pt-3' : ''}>
+            {group && (
+              <p className="mb-1 pl-3 text-[10px] font-semibold uppercase tracking-label text-white/25">
+                {group}
+              </p>
+            )}
             {nav
               .filter((n) => n.group === group)
               .map((item) => {
