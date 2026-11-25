@@ -1,5 +1,5 @@
-// Copies the Supabase strings from .env into Vercel as DATABASE_URL and
-// DIRECT_URL, through stdin, so neither value is printed or lands in history.
+// Copies settings from .env into Vercel through stdin, so no value is printed
+// or lands in shell history.
 //   node scripts/push-env.mjs production preview
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -14,9 +14,14 @@ const env = Object.fromEntries(
     }),
 );
 
+// Vercel name → value. The Supabase database strings are stored under their own
+// names in .env so local development keeps using SQLite.
 const pairs = [
   ['DATABASE_URL', env.SUPABASE_DATABASE_URL],
   ['DIRECT_URL', env.SUPABASE_DIRECT_URL],
+  ['SUPABASE_URL', env.SUPABASE_URL],
+  ['SUPABASE_SECRET_KEY', env.SUPABASE_SECRET_KEY],
+  ['STORAGE', 'supabase'],
 ];
 
 const targets = process.argv.slice(2);
@@ -33,23 +38,21 @@ for (const target of targets) {
       failed = true;
       continue;
     }
-
-    // Replace rather than duplicate if it already exists.
     spawnSync('npx', ['vercel', 'env', 'rm', name, target, '--yes'], {
       shell: process.platform === 'win32',
       stdio: 'ignore',
     });
-
     const r = spawnSync('npx', ['vercel', 'env', 'add', name, target], {
       shell: process.platform === 'win32',
       input: value,
       encoding: 'utf8',
     });
-
     if (r.status === 0) console.log(`✓ ${name} → ${target}`);
     else {
       failed = true;
-      const out = `${r.stdout ?? ''}${r.stderr ?? ''}`.replace(/postgres(ql)?:\/\/\S+/g, '<url hidden>');
+      const out = `${r.stdout ?? ''}${r.stderr ?? ''}`
+        .replace(/postgres(ql)?:\/\/\S+/g, '<url hidden>')
+        .replace(/sb_secret_\S+/g, '<key hidden>');
       console.error(`✗ ${name} → ${target}\n${out.split('\n').slice(-4).join('\n')}`);
     }
   }
