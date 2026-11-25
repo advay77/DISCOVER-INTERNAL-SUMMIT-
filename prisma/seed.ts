@@ -31,6 +31,7 @@ const WORKSTREAMS = [
   { key: 'summit', name: 'Annual Summit', color: '#1D6FE0', order: 3, description: 'The flagship two-day summit.' },
   { key: 'partnerships', name: 'Partnerships', color: '#D97708', order: 4, description: 'Sponsors and member companies.' },
   { key: 'comms', name: 'Communications', color: '#DB2777', order: 5, description: 'Email, LinkedIn and the marketing calendar.' },
+  { key: 'finance', name: 'Finance', color: '#1E7A4B', order: 6, restricted: true, description: 'Budget, vendor payments and sponsorship income. Board only.' },
 ];
 
 const USERS = ACCOUNTS;
@@ -125,6 +126,7 @@ const CHANNELS = [
   { key: 'professional-dev', name: 'professional-dev', purpose: 'Webinars and the Earth Day event.', type: 'workstream', ws: 'professional-dev' },
   { key: 'volunteers', name: 'volunteers', purpose: 'Day-of coordination. Everyone on site is here.', type: 'public' },
   { key: 'board', name: 'board', purpose: 'Officers and directors only.', type: 'private' },
+  { key: 'finance', name: 'finance', purpose: 'Budget, payments and sponsorship income. Board only.', type: 'private' },
   { key: 'random', name: 'random', purpose: 'The good stuff.', type: 'public' },
 ];
 

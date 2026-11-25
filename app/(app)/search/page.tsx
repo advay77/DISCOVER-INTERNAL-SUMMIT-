@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireUser, can, scopeOf, workstreamIds } from '@/lib/authz';
+import { requireUser, can, scopeFilter, restrictionFilter } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { PageHeader, Card, Empty, Pill, Avatar } from '@/components/ui';
 import { relativeTime } from '@/lib/format';
@@ -22,19 +22,16 @@ export default async function SearchPage({
     );
   }
 
-  const tscope = scopeOf(user, 'tasks:view');
-  const taskWhere: any =
-    tscope === 'all'
-      ? {}
-      : tscope === 'own'
-        ? { ownerId: user.id }
-        : tscope === 'workstream'
-          ? { OR: [{ workstreamId: { in: workstreamIds(user) } }, { ownerId: user.id }] }
-          : { id: '__denied__' };
+  const taskWhere: any = scopeFilter(user, 'tasks:view');
+  const restriction = restrictionFilter(user);
 
   const [tasks, speakers, people, messages] = await Promise.all([
     can(user, 'tasks:view')
-      ? db.task.findMany({ where: { ...taskWhere, title: { contains: term } }, take: 12, include: { owner: true } })
+      ? db.task.findMany({
+          where: { AND: [taskWhere, { title: { contains: term } }] },
+          take: 12,
+          include: { owner: true },
+        })
       : [],
     can(user, 'speakers:view')
       ? db.speaker.findMany({

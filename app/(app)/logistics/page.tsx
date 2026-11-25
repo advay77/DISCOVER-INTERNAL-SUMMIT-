@@ -1,4 +1,4 @@
-import { requireCan, scopeOf, workstreamIds, redactMany, MONEY_GATES } from '@/lib/authz';
+import { requireCan, scopeOf, scopeFilter, redactMany, MONEY_GATES } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { PageHeader, Card, StatusPill, Avatar, StatTile, Empty, Pill } from '@/components/ui';
 import { money } from '@/lib/format';
@@ -8,12 +8,7 @@ export default async function LogisticsPage() {
   const user = await requireCan('vendors:view');
 
   const scope = scopeOf(user, 'vendors:view');
-  const where: any =
-    scope === 'all'
-      ? {}
-      : scope === 'workstream'
-        ? { OR: [{ workstreamId: { in: workstreamIds(user) } }, { ownerId: user.id }] }
-        : { id: '__denied__' };
+  const where: any = scopeFilter(user, 'vendors:view');
 
   const [rows, event] = await Promise.all([
     db.vendor.findMany({ where, orderBy: { name: 'asc' }, include: { owner: true, workstream: true } }),

@@ -1,4 +1,4 @@
-import { requireUser, can, scopeOf, workstreamIds } from '@/lib/authz';
+import { requireUser, can, scopeFilter } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { Sidebar, MobileNav, type NavEntry } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
@@ -9,15 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const event = await db.event.findFirst({ where: { isCurrent: true } });
 
   // Open task count, scoped exactly the way the Tasks page scopes it.
-  const taskScope = scopeOf(user, 'tasks:view');
-  const taskWhere: any =
-    taskScope === 'all'
-      ? {}
-      : taskScope === 'own'
-        ? { ownerId: user.id }
-        : taskScope === 'workstream'
-          ? { OR: [{ workstreamId: { in: workstreamIds(user) } }, { ownerId: user.id }] }
-          : { id: '__denied__' };
+  const taskWhere: any = scopeFilter(user, 'tasks:view');
 
   const [openTasks, unread] = await Promise.all([
     db.task.count({ where: { ...taskWhere, status: { not: 'done' } } }),

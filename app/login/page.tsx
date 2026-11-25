@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { currentUser } from '@/lib/auth';
+import { IS_DEMO } from '@/lib/db';
 import { Logo } from '@/components/Logo';
 import { LoginForm } from './LoginForm';
 
@@ -70,6 +71,35 @@ export default async function LoginPage({
             DISCOVER internal
           </p>
           <h2 className="display mt-3 text-[32px] leading-tight text-ink">Sign in</h2>
+
+          {IS_DEMO && (
+            <div className="mt-5 rounded-[5px] border-l-2 border-brass bg-brass-100 px-4 py-3">
+              <p className="text-[12.5px] font-semibold text-ink">Demo</p>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">
+                Everything works, and anything you change here resets on its own. Sign in with any
+                address below and the password{' '}
+                <code className="rounded-[2px] bg-white px-1 py-0.5 font-semibold text-ink">
+                  discover-demo
+                </code>
+                .
+              </p>
+              <ul className="mt-2 space-y-0.5 text-[12px] text-ink-muted">
+                <li>
+                  <strong className="text-ink">yahne@discover.org</strong> — President, sees
+                  everything
+                </li>
+                <li>
+                  <strong className="text-ink">gagan@discover.org</strong> — Treasurer, runs Finance
+                </li>
+                <li>
+                  <strong className="text-ink">taylor@discover.org</strong> — Communications lead
+                </li>
+                <li>
+                  <strong className="text-ink">mandy@discover.org</strong> — Volunteer, no Finance
+                </li>
+              </ul>
+            </div>
+          )}
 
           <LoginForm door={door} />
         </div>

@@ -17,3 +17,5 @@ CREDENTIALS.md
 
 .vercel
 .env*
+
+prisma/demo.db

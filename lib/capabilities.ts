@@ -91,60 +91,63 @@ export function capabilityDef(key: string) {
   return CAPABILITIES.find((c) => c.key === key);
 }
 
-/** The default matrix shipped with V1 — section 3.3 of PRODUCT-REVIEW.md. */
+/**
+ * The default matrix.
+ *
+ * DISCOVER's own rule: everyone can see everyone's work. The organisation is
+ * twenty-odd people who already share three spreadsheets, so hiding the
+ * programme from each other helps nobody.
+ *
+ * The one exception is **Finance** — the budget, vendor amounts and sponsorship
+ * income. That workstream is led by the Treasurer and is open to the board only.
+ *
+ * Control is separate from visibility: everyone reads, but editing stays with
+ * the people who own the work, and Admin stays with the President and officers.
+ */
 export const DEFAULT_MATRIX: Record<string, Record<string, Scope>> = {
   president: Object.fromEntries(CAPABILITY_KEYS.map((k) => [k, 'all' as Scope])),
 
   officer: {
     ...Object.fromEntries(CAPABILITY_KEYS.map((k) => [k, 'all' as Scope])),
     'admin:permissions': 'none',
-    'finance:edit': 'none',
   },
 
+  // Board directors: full visibility, including Finance.
   director: {
-    'tasks:view': 'all', 'tasks:edit': 'workstream', 'tasks:assign': 'workstream',
-    'speakers:view': 'all', 'speakers:contact': 'all', 'speakers:edit': 'workstream',
-    'agenda:view': 'all', 'agenda:edit': 'workstream',
-    'sponsors:view': 'all', 'sponsors:edit': 'workstream',
-    'vendors:view': 'all', 'vendors:edit': 'workstream',
-    'finance:view': 'none', 'finance:edit': 'none',
-    'attendees:view': 'all', 'attendees:contact': 'none', 'attendees:export': 'none',
-    'questions:view': 'all', 'questions:edit': 'workstream',
-    'files:view': 'all', 'files:upload': 'all', 'files:delete': 'none',
-    'chat:use': 'all', 'chat:dm': 'all', 'chat:channel.create': 'all', 'chat:announce': 'workstream',
-    'team:view': 'all', 'team:contact': 'all',
-    'retro:view': 'all', 'retro:write': 'all',
-    'admin:users': 'none', 'admin:roles': 'none', 'admin:permissions': 'none', 'admin:event': 'none',
+    ...Object.fromEntries(CAPABILITY_KEYS.map((k) => [k, 'all' as Scope])),
+    'finance:edit': 'none',
+    'admin:users': 'none',
+    'admin:roles': 'none',
+    'admin:permissions': 'none',
+    'admin:event': 'none',
   },
 
+  // Workstream leads: see everything the board sees except the money.
   lead: {
-    'tasks:view': 'all', 'tasks:edit': 'workstream', 'tasks:assign': 'workstream',
-    'speakers:view': 'all', 'speakers:contact': 'workstream', 'speakers:edit': 'workstream',
-    'agenda:view': 'all', 'agenda:edit': 'workstream',
-    'sponsors:view': 'workstream', 'sponsors:edit': 'workstream',
-    'vendors:view': 'workstream', 'vendors:edit': 'workstream',
-    'finance:view': 'workstream', 'finance:edit': 'none',
-    'attendees:view': 'all', 'attendees:contact': 'none', 'attendees:export': 'none',
+    ...Object.fromEntries(CAPABILITY_KEYS.map((k) => [k, 'all' as Scope])),
+    'finance:view': 'none',
+    'finance:edit': 'none',
+    'attendees:export': 'none',
+    'admin:users': 'none',
+    'admin:roles': 'none',
+    'admin:permissions': 'none',
+    'admin:event': 'none',
+  },
+
+  // Volunteers: the same view of the work, but they do not move other
+  // people's records, and Finance is closed to them.
+  volunteer: {
+    'tasks:view': 'all', 'tasks:edit': 'own', 'tasks:assign': 'none',
+    'speakers:view': 'all', 'speakers:contact': 'all', 'speakers:edit': 'workstream',
+    'agenda:view': 'all', 'agenda:edit': 'none',
+    'sponsors:view': 'all', 'sponsors:edit': 'none',
+    'vendors:view': 'all', 'vendors:edit': 'none',
+    'finance:view': 'none', 'finance:edit': 'none',
+    'attendees:view': 'all', 'attendees:contact': 'all', 'attendees:export': 'none',
     'questions:view': 'all', 'questions:edit': 'workstream',
     'files:view': 'all', 'files:upload': 'all', 'files:delete': 'none',
     'chat:use': 'all', 'chat:dm': 'all', 'chat:channel.create': 'all', 'chat:announce': 'workstream',
     'team:view': 'all', 'team:contact': 'all',
-    'retro:view': 'all', 'retro:write': 'all',
-    'admin:users': 'none', 'admin:roles': 'none', 'admin:permissions': 'none', 'admin:event': 'none',
-  },
-
-  volunteer: {
-    'tasks:view': 'own', 'tasks:edit': 'own', 'tasks:assign': 'none',
-    'speakers:view': 'none', 'speakers:contact': 'none', 'speakers:edit': 'none',
-    'agenda:view': 'all', 'agenda:edit': 'none',
-    'sponsors:view': 'none', 'sponsors:edit': 'none',
-    'vendors:view': 'workstream', 'vendors:edit': 'none',
-    'finance:view': 'none', 'finance:edit': 'none',
-    'attendees:view': 'none', 'attendees:contact': 'none', 'attendees:export': 'none',
-    'questions:view': 'workstream', 'questions:edit': 'none',
-    'files:view': 'workstream', 'files:upload': 'all', 'files:delete': 'none',
-    'chat:use': 'all', 'chat:dm': 'all', 'chat:channel.create': 'none', 'chat:announce': 'none',
-    'team:view': 'all', 'team:contact': 'none',
     'retro:view': 'all', 'retro:write': 'all',
     'admin:users': 'none', 'admin:roles': 'none', 'admin:permissions': 'none', 'admin:event': 'none',
   },

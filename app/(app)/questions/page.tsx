@@ -1,4 +1,4 @@
-import { requireCan, scopeOf, workstreamIds, can } from '@/lib/authz';
+import { requireCan, scopeOf, scopeFilter, can } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { PageHeader, Card, StatusPill, Avatar, Empty } from '@/components/ui';
 import { relativeTime } from '@/lib/format';
@@ -8,12 +8,7 @@ export default async function QuestionsPage() {
   const user = await requireCan('questions:view');
 
   const scope = scopeOf(user, 'questions:view');
-  const where: any =
-    scope === 'all'
-      ? {}
-      : scope === 'workstream'
-        ? { OR: [{ workstreamId: { in: workstreamIds(user) } }, { ownerId: user.id }] }
-        : { id: '__denied__' };
+  const where: any = scopeFilter(user, 'questions:view');
 
   const [questions, people, workstreams] = await Promise.all([
     db.openQuestion.findMany({ where, orderBy: { updatedAt: 'desc' }, include: { owner: true, workstream: true } }),

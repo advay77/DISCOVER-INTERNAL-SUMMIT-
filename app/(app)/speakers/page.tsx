@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireCan, scopeOf, workstreamIds, redactMany, SPEAKER_GATES } from '@/lib/authz';
+import { requireCan, scopeOf, scopeFilter, redactMany, SPEAKER_GATES } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { PageHeader, Card, Pill, StatusPill, Avatar, StatTile, Empty } from '@/components/ui';
 import { IconSpeaker, IconCheck, IconRetro, IconAlert, IconChat } from '@/components/icons';
@@ -15,12 +15,7 @@ export default async function SpeakersPage({
   const { status } = await searchParams;
 
   const scope = scopeOf(user, 'speakers:view');
-  const where: any =
-    scope === 'all'
-      ? {}
-      : scope === 'workstream'
-        ? { OR: [{ workstreamId: { in: workstreamIds(user) } }, { ownerId: user.id }] }
-        : { id: '__denied__' };
+  const where: any = scopeFilter(user, 'speakers:view');
   if (status) where.status = status;
 
   const rows = await db.speaker.findMany({

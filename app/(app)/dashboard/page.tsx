@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireUser, can, scopeOf, workstreamIds } from '@/lib/authz';
+import { requireUser, can, scopeOf, scopeFilter } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { Card, Pill, Ring, StatTile, Avatar, StatusPill, Empty } from '@/components/ui';
 import { IconAlert, IconClock, IconCheck, IconAttendees, IconTask } from '@/components/icons';
@@ -10,15 +10,7 @@ export default async function Dashboard() {
   const event = await db.event.findFirst({ where: { isCurrent: true } });
 
   const scope = scopeOf(user, 'tasks:view');
-  const mine = workstreamIds(user);
-  const taskWhere: any =
-    scope === 'all'
-      ? {}
-      : scope === 'own'
-        ? { ownerId: user.id }
-        : scope === 'workstream'
-          ? { OR: [{ workstreamId: { in: mine } }, { ownerId: user.id }] }
-          : { id: '__denied__' };
+  const taskWhere: any = scopeFilter(user, 'tasks:view');
 
   const now = new Date();
 
@@ -74,7 +66,7 @@ export default async function Dashboard() {
 
   const openQuestions = can(user, 'questions:view')
     ? await db.openQuestion.findMany({
-        where: { status: { not: 'Answered' } },
+        where: { AND: [scopeFilter(user, 'questions:view'), { status: { not: 'Answered' } }] },
         orderBy: { updatedAt: 'desc' },
         take: 4,
         include: { owner: true },

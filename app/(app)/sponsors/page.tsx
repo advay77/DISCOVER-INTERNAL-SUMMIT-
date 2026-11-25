@@ -1,4 +1,4 @@
-import { requireCan, scopeOf, workstreamIds, redactMany, MONEY_GATES } from '@/lib/authz';
+import { requireCan, scopeOf, scopeFilter, redactMany, MONEY_GATES } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { PageHeader, Card, Pill, StatusPill, Avatar, StatTile, Empty } from '@/components/ui';
 import { money } from '@/lib/format';
@@ -15,12 +15,7 @@ export default async function SponsorsPage() {
   const user = await requireCan('sponsors:view');
 
   const scope = scopeOf(user, 'sponsors:view');
-  const where: any =
-    scope === 'all'
-      ? {}
-      : scope === 'workstream'
-        ? { OR: [{ workstreamId: { in: workstreamIds(user) } }, { ownerId: user.id }] }
-        : { id: '__denied__' };
+  const where: any = scopeFilter(user, 'sponsors:view');
 
   const rows = await db.sponsor.findMany({ where, orderBy: [{ tier: 'asc' }, { company: 'asc' }], include: { owner: true } });
   const sponsors = redactMany(user, rows as any[], MONEY_GATES as any);

@@ -81,6 +81,10 @@ model Workstream {
   name        String
   description String?
   color       String       @default("#1D6FE0")
+  /// A restricted workstream and everything inside it (tasks, questions,
+  /// vendors, sponsors, its channel) is visible only to people who can see
+  /// finance — the board. Finance is the only one.
+  restricted  Boolean      @default(false)
   leadId      String?
   lead        User?        @relation("WorkstreamLead", fields: [leadId], references: [id])
   order       Int          @default(0)

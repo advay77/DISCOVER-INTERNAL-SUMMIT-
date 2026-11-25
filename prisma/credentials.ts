@@ -11,8 +11,17 @@ import { LEADERSHIP, VOLUNTEERS, type SeedUser } from './accounts.ts';
 const WORDS_A = ['Hudson', 'Marlow', 'Tandem', 'Bramble', 'Cinder', 'Juniper', 'Pollen', 'Lantern', 'Harbor', 'Willow', 'Ember', 'Cobalt', 'Rally', 'Sorrel', 'Pivot', 'Mango', 'Vector', 'Saffron', 'Kestrel', 'Opal', 'Basalt', 'Verdant', 'Thistle', 'Nimbus', 'Granite', 'Clover', 'Aspen', 'Maple', 'Tungsten', 'Quarry', 'Beacon', 'Cedar'];
 const WORDS_B = ['Keel', 'Vane', 'Loft', 'Quay', 'Reef', 'Arc', 'Mast', 'Brim', 'Flint', 'Crate', 'Slate', 'Fern', 'Birch', 'Dock', 'Cairn', 'Stile', 'Dune', 'Loom', 'Mint', 'Ridge', 'Pike', 'Oak', 'Cove', 'Fold', 'Lark', 'Spire', 'Drift', 'Quill', 'Bay', 'Ledge', 'Thorn', 'Gale'];
 
-/** Readable but unguessable: Word-NN-Word. */
+/**
+ * Readable but unguessable: Word-NN-Word.
+ *
+ * A demo build (DEMO_SEED=1) uses one published password instead, because the
+ * point of a demo link is that whoever has it can sign in. A demo deploy holds
+ * no real data and resets on its own.
+ */
+export const DEMO_PASSWORD = 'discover-demo';
+
 export function newPassword() {
+  if (process.env.DEMO_SEED === '1') return DEMO_PASSWORD;
   const a = WORDS_A[randomInt(WORDS_A.length)];
   const b = WORDS_B[randomInt(WORDS_B.length)];
   return `${a}-${randomInt(10, 99)}-${b}`;
@@ -35,6 +44,9 @@ const ROLE_NAMES: Record<string, string> = {
 };
 
 export async function writeCredentials(issued: Map<string, string>) {
+  // A demo build has no local file to write to that anyone will read.
+  if (process.env.DEMO_SEED === '1') return;
+
   const row = (u: SeedUser) =>
     `| ${u.name} | \`${u.email}\` | \`${issued.get(u.email)}\` | ${
       u.title.includes(ROLE_NAMES[u.role]) ? u.title : `${ROLE_NAMES[u.role]} — ${u.title}`

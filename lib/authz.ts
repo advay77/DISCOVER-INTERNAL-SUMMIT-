@@ -48,6 +48,23 @@ export async function requireCan(capability: string): Promise<Actor> {
  * `own`       → only records I own
  * `none`      → impossible filter, so a bad call returns nothing rather than everything
  */
+/**
+ * Records inside a restricted workstream (Finance) are invisible to anyone
+ * who cannot see finance, whatever else their role allows. Records with no
+ * workstream are unaffected.
+ */
+export function restrictionFilter(user: Actor) {
+  if (scopeOf(user, 'finance:view') !== 'none') return null;
+  return {
+    OR: [{ workstreamId: null }, { workstream: { is: { restricted: false } } }],
+  };
+}
+
+/** Workstreams this person may see at all — Finance is hidden from the rest. */
+export function visibleWorkstreams(user: Actor) {
+  return scopeOf(user, 'finance:view') === 'none' ? { restricted: false } : {};
+}
+
 export function scopeFilter(
   user: Actor,
   capability: string,
@@ -56,31 +73,38 @@ export function scopeFilter(
   const ownerField = opts.ownerField ?? 'ownerId';
   const workstreamField = opts.workstreamField ?? 'workstreamId';
   const scope = scopeOf(user, capability);
+  const restriction = restrictionFilter(user);
 
-  if (scope === 'all') return {};
+  const withRestriction = (base: any) =>
+    restriction ? { AND: [base, restriction] } : base;
+
+  if (scope === 'all') return restriction ?? {};
   if (scope === 'none') return { id: '__denied__' };
 
   const mine = workstreamIds(user);
 
   if (scope === 'workstream') {
-    return {
+    return withRestriction({
       OR: [
         { [workstreamField]: { in: mine.length ? mine : ['__none__'] } },
         { [ownerField]: user.id },
       ],
-    };
+    });
   }
 
   // own
-  return { [ownerField]: user.id };
+  return withRestriction({ [ownerField]: user.id });
 }
 
 /** True when the actor may act on this particular record under the capability. */
 export function allows(
   user: Actor,
   capability: string,
-  record: { ownerId?: string | null; workstreamId?: string | null },
+  record: { ownerId?: string | null; workstreamId?: string | null; workstream?: { restricted?: boolean } | null },
 ): boolean {
+  // Finance is closed regardless of what else the role allows.
+  if (record.workstream?.restricted && scopeOf(user, 'finance:view') === 'none') return false;
+
   const scope = scopeOf(user, capability);
   if (scope === 'all') return true;
   if (scope === 'none') return false;

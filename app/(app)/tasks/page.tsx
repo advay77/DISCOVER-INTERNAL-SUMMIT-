@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireCan, scopeOf, workstreamIds, can } from '@/lib/authz';
+import { requireCan, scopeOf, scopeFilter, visibleWorkstreams } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { PageHeader, Card, Pill, StatusPill, Avatar, Empty } from '@/components/ui';
 import { dueLabel } from '@/lib/format';
@@ -22,17 +22,7 @@ export default async function TasksPage({
   const { filter, view = 'board', ws } = await searchParams;
 
   const scope = scopeOf(user, 'tasks:view');
-  const mineWs = workstreamIds(user);
-  const base: any =
-    scope === 'all'
-      ? {}
-      : scope === 'own'
-        ? { ownerId: user.id }
-        : scope === 'workstream'
-          ? { OR: [{ workstreamId: { in: mineWs } }, { ownerId: user.id }] }
-          : { id: '__denied__' };
-
-  const where: any = { ...base };
+  const where: any = { AND: [scopeFilter(user, 'tasks:view')] };
   if (filter === 'mine') where.ownerId = user.id;
   if (filter === 'overdue') {
     where.status = { not: 'done' };
@@ -48,7 +38,7 @@ export default async function TasksPage({
       include: { owner: true, workstream: true },
       take: 400,
     }),
-    db.workstream.findMany({ orderBy: { order: 'asc' } }),
+    db.workstream.findMany({ where: visibleWorkstreams(user), orderBy: { order: 'asc' } }),
     db.user.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
   ]);
 
