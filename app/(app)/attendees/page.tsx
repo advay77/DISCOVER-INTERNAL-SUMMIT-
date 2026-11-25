@@ -26,7 +26,7 @@ export default async function AttendeesPage() {
         subtitle="Registrations against the goals the board set in the December meeting."
       />
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatTile value={attendees.length} label="Total registered" tone="navy" icon={<IconAttendees size={17} />} />
         <StatTile value={confirmed} label="Confirmed" tone="ok" icon={<IconCheck size={17} />} />
         <StatTile value={pending} label="Pending" tone="warn" icon={<IconClock size={17} />} />

@@ -63,7 +63,8 @@ export function PeopleAdmin({
       {error && <p className="bg-brick/10 px-5 py-2 text-[13px] font-medium text-brick">{error}</p>}
       {notice && <p className="bg-forest/10 px-5 py-2 text-[13px] font-medium text-forest">{notice}</p>}
 
-      <table className="w-full">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[720px]">
         <thead className="border-b border-line bg-paper">
           <tr>
             <th className="th">Member</th>
@@ -134,6 +135,7 @@ export function PeopleAdmin({
           ))}
         </tbody>
       </table>
+      </div>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/35 p-4 py-10 backdrop-blur-sm">

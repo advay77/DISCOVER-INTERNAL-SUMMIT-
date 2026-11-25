@@ -204,8 +204,8 @@ export function Huddle({ channelId, meId, channelName }: { channelId: string; me
   const others = participants.filter((p) => p.userId !== meId);
 
   return (
-    <div className="border-b border-line bg-paper px-5 py-2.5">
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="border-b border-line bg-paper px-4 py-2 sm:px-5 sm:py-2.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className="text-2xs font-semibold uppercase tracking-label text-ink-faint">Huddle</span>
 
         {participants.length === 0 && !inCall && (

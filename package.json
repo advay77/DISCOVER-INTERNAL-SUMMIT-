@@ -14,7 +14,7 @@
     "setup": "prisma generate && prisma db push && npm run db:seed",
     "use:sqlite": "node scripts/use-provider.mjs sqlite",
     "use:postgres": "node scripts/use-provider.mjs postgresql",
-    "vercel-build": "node scripts/use-provider.mjs postgresql && prisma generate && prisma db push --accept-data-loss && next build"
+    "vercel-build": "node scripts/vercel-build.mjs"
   },
   "dependencies": {
     "@prisma/client": "6.1.0",

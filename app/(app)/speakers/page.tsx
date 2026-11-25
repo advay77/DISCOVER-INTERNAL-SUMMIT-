@@ -47,7 +47,7 @@ export default async function SpeakersPage({
         subtitle="The outreach pipeline from the 2026 tracker — with the summary computed, not typed."
       />
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatTile value={all.length} label="Speaker targets" tone="navy" icon={<IconSpeaker size={17} />} />
         <StatTile value={invited} label="Invitations sent" tone="brand" icon={<IconChat size={17} />} />
         <StatTile value={confirmed} label="Confirmed" tone="ok" icon={<IconCheck size={17} />} />

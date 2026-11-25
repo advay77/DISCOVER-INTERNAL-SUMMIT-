@@ -29,7 +29,7 @@ export default async function LogisticsPage() {
     <div className="mx-auto max-w-[1180px]">
       <PageHeader title="Logistics" subtitle="Venue, vendors and everything that has to be in the room on the day." />
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatTile value={rows.length} label="Vendors engaged" tone="navy" icon={<IconLogistics size={17} />} />
         <StatTile value={settled} label="Paid or deposited" tone="ok" icon={<IconCheck size={17} />} />
         <StatTile value={rows.length - settled} label="Still open" tone="warn" icon={<IconClock size={17} />} />

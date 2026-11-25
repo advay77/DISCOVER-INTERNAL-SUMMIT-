@@ -87,13 +87,13 @@ export default async function Dashboard() {
   return (
     <div className="mx-auto max-w-[1340px] space-y-5">
       {/* Hero — a masthead, not a gradient card */}
-      <section className="rounded-card bg-navy-900 px-6 py-7 text-white lg:px-9 lg:py-9">
+      <section className="rounded-card bg-navy-900 px-5 py-6 text-white sm:px-6 sm:py-7 lg:px-9 lg:py-9">
         <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
           <div className="min-w-0">
             <p className="text-2xs font-semibold uppercase tracking-label text-brass">
               {event?.theme ?? 'Current cycle'}
             </p>
-            <h1 className="display mt-3 text-[38px] leading-[1.05] lg:text-[46px]">
+            <h1 className="display mt-3 text-[30px] leading-[1.05] sm:text-[38px] lg:text-[46px]">
               {event?.name ?? 'No active cycle'}
             </h1>
             {event && (
@@ -115,21 +115,21 @@ export default async function Dashboard() {
           </div>
 
           {/* Countdown as one typographic line */}
-          <div className="flex items-stretch gap-8 border-l border-white/12 pl-8">
+          <div className="flex w-full items-stretch gap-6 border-t border-white/12 pt-5 sm:w-auto sm:gap-8 sm:border-l sm:border-t-0 sm:pl-8 sm:pt-0">
             <div>
-              <p className="display text-[46px] leading-none">
+              <p className="display text-[38px] leading-none sm:text-[46px]">
                 {countdown >= 0 ? countdown : Math.abs(countdown)}
               </p>
               <p className="mt-2 text-[11px] uppercase tracking-label text-white/40">
                 {countdown >= 0 ? 'Days to go' : 'Days since'}
               </p>
             </div>
-            <div className="border-l border-white/12 pl-8">
-              <p className="display text-[46px] leading-none">{progress}%</p>
+            <div className="border-l border-white/12 pl-6 sm:pl-8">
+              <p className="display text-[38px] leading-none sm:text-[46px]">{progress}%</p>
               <p className="mt-2 text-[11px] uppercase tracking-label text-white/40">
                 {scope === 'own' ? 'Your tasks done' : 'Cycle complete'}
               </p>
-              <div className="mt-3 w-36 bg-white/15">
+              <div className="mt-3 w-28 bg-white/15 sm:w-36">
                 <div className="h-[3px] bg-brass" style={{ width: `${progress}%` }} />
               </div>
             </div>
@@ -138,7 +138,7 @@ export default async function Dashboard() {
       </section>
 
       {/* Counters */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatTile value={overdue} label="Overdue" tone="bad" icon={<IconAlert size={17} />} href="/tasks?filter=overdue" />
         <StatTile value={dueWeek} label="Due this week" tone="warn" icon={<IconClock size={17} />} href="/tasks" />
         <StatTile value={done} label="Completed" tone="ok" icon={<IconCheck size={17} />} href="/tasks?filter=done" />

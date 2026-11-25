@@ -34,7 +34,7 @@ export default async function SponsorsPage() {
     <div className="mx-auto max-w-[1180px]">
       <PageHeader title="Sponsors" subtitle="Partnerships pipeline for the current cycle." />
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatTile value={rows.length} label="In the pipeline" tone="navy" icon={<IconSponsor size={17} />} />
         <StatTile value={confirmed.length} label="Confirmed" tone="ok" icon={<IconCheck size={17} />} />
         <StatTile value={rows.filter((s) => s.contractSigned).length} label="Contracts signed" tone="brand" icon={<IconFiles size={17} />} />

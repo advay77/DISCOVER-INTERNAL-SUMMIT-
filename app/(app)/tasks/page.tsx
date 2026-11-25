@@ -129,8 +129,8 @@ export default async function TasksPage({
       {tasks.length === 0 ? (
         <Empty title="No tasks match this filter" hint="Try a different filter, or create one." />
       ) : view === 'list' ? (
-        <Card bodyClass="p-0">
-          <table className="w-full">
+        <Card bodyClass="p-0 overflow-x-auto">
+          <table className="w-full min-w-[760px]">
             <thead className="border-b border-line bg-paper">
               <tr>
                 <th className="th">Task</th>

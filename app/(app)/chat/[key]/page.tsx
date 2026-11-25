@@ -8,6 +8,7 @@ import { Huddle } from '@/components/Huddle';
 import { Avatar } from '@/components/ui';
 import { NewChannel, ChannelMembers } from '@/components/ChannelAdmin';
 import { BrowseChannels } from '@/components/BrowseChannels';
+import { ChannelSwitcher } from '@/components/ChannelSwitcher';
 import { IconHash, IconLock } from '@/components/icons';
 
 export default async function ChannelPage({ params }: { params: Promise<{ key: string }> }) {
@@ -53,8 +54,8 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
   const canManage = can(user, 'admin:users');
 
   return (
-    <div className="mx-auto h-[calc(100vh-7.2rem)] max-w-[1400px]">
-      <div className="grid h-full gap-4 lg:grid-cols-[236px_1fr]">
+    <div className="mx-auto flex h-[calc(100dvh-11rem)] min-h-[26rem] max-w-[1400px] flex-col lg:h-[calc(100dvh-7.5rem)]">
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[236px_1fr] lg:gap-4">
         {/* Rail */}
         <aside className="card hidden min-h-0 flex-col overflow-hidden lg:flex">
           <div className="border-b border-line px-4 py-3">
@@ -120,9 +121,22 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
           </div>
         </aside>
 
+        <ChannelSwitcher
+          currentKey={key}
+          currentName={channel.name}
+          currentType={channel.type}
+          channels={memberships.map((m) => ({
+            id: m.channel.id,
+            key: m.channel.key,
+            name: m.channel.name,
+            type: m.channel.type,
+            unread: unread[m.channel.id] ?? 0,
+          }))}
+        />
+
         {/* Conversation */}
         <section className="card flex min-h-0 flex-col overflow-hidden">
-          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
+          <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-line px-4 py-2.5 sm:px-5 sm:py-3">
             <div className="min-w-0">
               <h1 className="flex items-center gap-2 text-[16px] font-semibold text-ink">
                 {channel.type === 'private' ? (
@@ -145,7 +159,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="flex -space-x-1.5">
+              <div className="hidden -space-x-1.5 sm:flex">
                 {members.map((m) => (
                   <Avatar key={m.id} name={m.user.name} accent={m.user.accent} size={24} ring />
                 ))}

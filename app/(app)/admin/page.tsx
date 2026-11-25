@@ -58,7 +58,7 @@ export default async function AdminPage({
         subtitle="The President holds master access and decides who sees what. Everything here is audited."
       />
 
-      <div className="mb-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {summary.map((c) => (
           <div key={c.label} className="card px-4 py-3">
             <div className="flex items-center justify-between">
@@ -88,7 +88,7 @@ export default async function AdminPage({
 
       {tab === 'permissions' && (
         <>
-          <div className="mb-5 grid gap-4 md:grid-cols-5">
+          <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {roles.map((r) => (
               <div key={r.id} className="card p-4">
                 <p className="text-[14px] font-bold text-ink">{r.name}</p>
@@ -160,14 +160,14 @@ export default async function AdminPage({
       {tab === 'channels' && can(user, 'admin:users') && (
         <Card
           title="Channels"
-          bodyClass="p-0"
+          bodyClass="p-0 overflow-x-auto"
           action={
             <span className="text-[12px] text-ink-muted">
               Workstream channels follow their workstream and cannot be edited here
             </span>
           }
         >
-          <table className="w-full">
+          <table className="w-full min-w-[640px]">
             <thead className="border-b border-line bg-paper">
               <tr>
                 <th className="th">Channel</th>
@@ -211,7 +211,7 @@ export default async function AdminPage({
       )}
 
       {tab === 'audit' && (
-        <Card title="Audit log" bodyClass="p-0">
+        <Card title="Audit log" bodyClass="p-0 overflow-x-auto">
           {audit.length === 0 ? (
             <p className="p-5 text-[13px] text-ink-faint">Nothing recorded yet.</p>
           ) : (

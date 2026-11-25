@@ -208,7 +208,9 @@ export function Thread({
     >
       <div
         className={clsx(
-          compact ? 'max-h-80 flex-1 space-y-4 overflow-y-auto pr-1' : 'flex-1 space-y-4 overflow-y-auto px-5 py-4',
+          compact
+            ? 'max-h-80 flex-1 space-y-4 overflow-y-auto pr-1'
+            : 'flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5',
           dragging && 'bg-brand-50',
         )}
       >
@@ -306,7 +308,7 @@ export function Thread({
       </div>
 
       {/* Composer */}
-      <div className={compact ? 'mt-3' : 'border-t border-line bg-white px-5 py-3'}>
+      <div className={compact ? 'mt-3' : 'border-t border-line bg-white px-4 py-2.5 sm:px-5 sm:py-3'}>
         {pendingFiles.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
             {pendingFiles.map((f) => (
@@ -330,7 +332,7 @@ export function Thread({
 
         {error && <p className="mb-2 text-[12px] font-medium text-brick">{error}</p>}
 
-        <form onSubmit={send} className="flex items-end gap-2">
+        <form onSubmit={send} className="flex flex-wrap items-end gap-2">
           <input
             ref={fileInput}
             type="file"
@@ -375,21 +377,21 @@ export function Thread({
             }}
             rows={1}
             placeholder={uploading ? 'Uploading…' : placeholder}
-            className="input max-h-28 min-h-[38px] resize-y py-2"
+            className="input order-first max-h-28 min-h-[38px] w-full resize-y py-2 sm:order-none sm:w-auto sm:flex-1"
             aria-label="Message"
           />
 
           <button
             type="submit"
             disabled={sending || (!value.trim() && pendingFiles.length === 0)}
-            className="btn-primary btn-sm shrink-0"
+            className="btn-primary btn-sm ml-auto shrink-0 sm:ml-0"
           >
             {sending ? '…' : 'Send'}
           </button>
         </form>
 
         {!compact && (
-          <p className="mt-1.5 text-[11px] text-ink-faint">
+          <p className="mt-1.5 hidden text-[11px] text-ink-faint sm:block">
             Enter sends · Shift + Enter for a new line · drag files anywhere in this panel
           </p>
         )}
