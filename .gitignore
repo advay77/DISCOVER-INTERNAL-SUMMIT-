@@ -19,3 +19,7 @@ CREDENTIALS.md
 .env*
 
 prisma/demo.db
+
+# Sign-in passwords for every environment, generated locally, never shipped
+CREDENTIALS*.md
+.env.backup*

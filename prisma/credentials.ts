@@ -126,5 +126,7 @@ keeps a person's history, decisions and messages intact while their sign-in
 stops.
 `;
 
-  await writeFile('CREDENTIALS.md', md, 'utf8');
+  // Local and hosted databases get different passwords, so each can write its
+  // own file: CREDENTIALS_FILE=CREDENTIALS.live.md for the hosted one.
+  await writeFile(process.env.CREDENTIALS_FILE || 'CREDENTIALS.md', md, 'utf8');
 }

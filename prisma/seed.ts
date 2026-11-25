@@ -391,7 +391,7 @@ async function main() {
   console.log(
     `  ${USERS.length} people · ${EVENTS.length + 1} events · ${steps.length + actionLog.length} tasks · ${SPEAKERS.length} speakers · ${CHANNELS.length} channels`,
   );
-  console.log('  Fresh passwords written to CREDENTIALS.md (gitignored, local only).');
+  console.log(`  Fresh passwords written to ${process.env.CREDENTIALS_FILE || 'CREDENTIALS.md'} (gitignored, local only).`);
 }
 
 main()
