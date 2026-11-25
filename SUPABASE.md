@@ -118,11 +118,18 @@ Then put your local setup back, or local development will try to use Supabase:
 npm run use:sqlite; npx prisma generate
 ```
 
-## Step 6 — Turn on backups
+## Step 6 — Check your backups
 
-Supabase → **Database** → **Backups**. Daily backups are on by default on the
-free plan with 7-day retention. Confirm it, because this is the only copy of
-the data once people start using it.
+Supabase → **Database** → **Backups**. Look at what it actually offers on your
+plan — do not assume. Restorable daily backups are a **paid-plan** feature;
+on the free plan you should expect none you can restore from the dashboard.
+
+This is the only copy of the data once people start using it. For real use,
+either move to a paid plan or take your own regular export
+(`pg_dump` against the direct connection string).
+
+An earlier version of this guide said the free plan includes 7-day daily
+backups. That was not checked and should not be relied on.
 
 ## Step 7 — Check it
 
