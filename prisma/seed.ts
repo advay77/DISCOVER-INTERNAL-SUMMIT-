@@ -351,6 +351,8 @@ async function main() {
     });
   }
 
+  await writeCredentials(issued);
+
   console.log('\n✓ seeded.');
   console.log(`  ${USERS.length} people · ${steps.length + actionLog.length} tasks · ${SPEAKERS.length} speakers · ${CHANNELS.length} channels`);
   console.log('  Fresh passwords written to CREDENTIALS.md (gitignored, local only).');
