@@ -58,7 +58,7 @@ The fastest way to test the access model is to sign in as these four in turn:
 | **Sponsors** | Pipeline by tier, logo and contract tracking, values behind `finance:view` |
 | **Logistics** | Venue, room block, vendors, payment status; amounts behind `finance:view` |
 | **Attendees** | Registrations against the board's goals; emails and export behind their own gates |
-| **Communications** | Channels per workstream, DMs, object threads, @mentions, unread counts, photo/video/file attachments with drag-and-drop, voice notes, emoji reactions, and a voice huddle per channel |
+| **Communications** | Channels per workstream, DMs, object threads, @mentions, unread counts, photo/video/file attachments with drag-and-drop, voice notes, emoji reactions, replies, edit and delete, load-older, live updates, and a video call link per channel |
 | **Files** | Folders, upload, permission-checked downloads, attachable to records |
 | **Team** | Member directory by workstream |
 | **Retro** | Plus / Delta / Consider — everyone can write, including volunteers |
@@ -95,10 +95,10 @@ bcrypt. No external service, no API key, no bill — clone, install, run.
 
 ### Known V1 tradeoffs
 
-1. **Chat polls every 3 seconds and the huddle every 1.8** instead of using websockets. Fine
-   at thirty users; the swap is confined to `components/Thread.tsx` and `components/Huddle.tsx`.
-   The huddle is mesh WebRTC — good to roughly six people before it needs an SFU, and it
-   needs microphone permission in a real browser.
+1. **Chat is live when Supabase Realtime is configured** (see DEPLOY.md → Realtime chat):
+   the server sends an empty "changed" ping after every write and browsers re-fetch only what
+   changed. Without the keys it polls for changes every 3 seconds, and only while the tab is
+   visible. Calls open a private Jitsi Meet room per channel rather than a built-in huddle.
 2. **SQLite** is single-writer. Correct for local testing; switch `provider` to `postgresql`
    and change `DATABASE_URL` before deploying.
 3. **Files are stored on local disk** under `storage/`. Move to S3-compatible storage at

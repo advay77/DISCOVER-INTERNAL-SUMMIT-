@@ -4,7 +4,8 @@ import { currentUser } from '@/lib/auth';
 import { can } from '@/lib/authz';
 import { rateLimit, clientKey, LIMITS as RATE } from '@/lib/ratelimit';
 import { channelNeedsReadReceipt } from '@/lib/unread';
-import { text, idList, LIMITS as BOUND } from '@/lib/validate';
+import { text, idList, id as validId, LIMITS as BOUND } from '@/lib/validate';
+import { ping, topicFor, type Scope } from '@/lib/realtime';
 
 /**
  * One endpoint serves channel messages, DMs and every object thread.
@@ -17,67 +18,168 @@ const THREAD_CAPABILITY: Record<string, string> = {
   speaker: 'speakers:view',
   sponsor: 'sponsors:view',
   vendor: 'vendors:view',
-  question: 'questions:view',
   session: 'agenda:view',
   event: 'tasks:view',
 };
 
+const PAGE = 50;
+
+const INCLUDE = {
+  author: { select: { id: true, name: true, accent: true, title: true } },
+  files: { select: { id: true, name: true, mime: true, size: true, durationMs: true } },
+  reactions: { select: { emoji: true, userId: true } },
+  parent: {
+    select: { id: true, body: true, deletedAt: true, author: { select: { id: true, name: true } } },
+  },
+} as const;
+
+type Row = Awaited<ReturnType<typeof db.message.findMany<{ include: typeof INCLUDE }>>>[number];
+
+/** Deleted messages go out as tombstones: no body, no files. */
+function shape(m: Row) {
+  const deleted = !!m.deletedAt;
+  return {
+    id: m.id,
+    body: deleted ? '' : m.body,
+    createdAt: m.createdAt,
+    editedAt: m.editedAt,
+    deleted,
+    author: m.author,
+    files: deleted ? [] : m.files,
+    reactions: deleted ? [] : m.reactions,
+    parent: m.parent
+      ? {
+          id: m.parent.id,
+          author: m.parent.author,
+          body: m.parent.deletedAt ? '' : m.parent.body.slice(0, 160),
+          deleted: !!m.parent.deletedAt,
+        }
+      : null,
+  };
+}
+
+function isoParam(v: string | null) {
+  if (!v) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** Who may read this conversation. Returns the Prisma filter, or an error response. */
+async function access(user: NonNullable<Awaited<ReturnType<typeof currentUser>>>, params: URLSearchParams) {
+  const channelId = params.get('channelId');
+  const entityType = params.get('entityType');
+  const entityId = params.get('entityId');
+  if (channelId) {
+    if (!can(user, 'chat:use')) return { error: NextResponse.json({ error: 'forbidden' }, { status: 403 }) };
+    const member = await db.channelMember.findUnique({
+      where: { channelId_userId: { channelId, userId: user.id } },
+    });
+    if (!member) return { error: NextResponse.json({ error: 'not a member' }, { status: 403 }) };
+    return { where: { channelId }, scope: { channelId } as Scope, member };
+  }
+  if (entityType && entityId) {
+    const capability = THREAD_CAPABILITY[entityType];
+    if (!capability || !can(user, capability)) {
+      return { error: NextResponse.json({ error: 'forbidden' }, { status: 403 }) };
+    }
+    return { where: { entityType, entityId }, scope: { entityType, entityId } as Scope, member: null };
+  }
+  return { error: NextResponse.json({ error: 'channelId or entity required' }, { status: 400 }) };
+}
+
+/**
+ * GET ?channelId= | ?entityType=&entityId=
+ *   (nothing)      → the latest 50, oldest first, plus `hasMore`
+ *   &before=<iso>  → the 50 before that moment (load older)
+ *   &after=<iso>   → everything created, edited, deleted or reacted to since
+ * Every answer carries `cursor` (pass back as `after`) and the realtime topic.
+ */
 export async function GET(req: Request) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
 
-  const url = new URL(req.url);
-  const channelId = url.searchParams.get('channelId');
-  const entityType = url.searchParams.get('entityType');
-  const entityId = url.searchParams.get('entityId');
+  const params = new URL(req.url).searchParams;
+  const ok = await access(user, params);
+  if ('error' in ok) return ok.error;
 
-  if (channelId) {
-    if (!can(user, 'chat:use')) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-    const member = await db.channelMember.findUnique({
-      where: { channelId_userId: { channelId, userId: user.id } },
-    });
-    if (!member) return NextResponse.json({ error: 'not a member' }, { status: 403 });
+  // Taken before the query, so nothing that lands during it is skipped.
+  const cursor = new Date();
+  const after = isoParam(params.get('after'));
+  const before = isoParam(params.get('before'));
 
-    const messages = await db.message.findMany({
-      where: { channelId, deletedAt: null },
+  let rows: Row[];
+  let hasMore = false;
+  if (after) {
+    // A small overlap covers clock skew between writes; the client de-duplicates.
+    rows = await db.message.findMany({
+      where: { ...ok.where, updatedAt: { gt: new Date(after.getTime() - 2000) } },
       orderBy: { createdAt: 'asc' },
       take: 200,
-      include: {
-        author: { select: { id: true, name: true, accent: true, title: true } },
-        files: { select: { id: true, name: true, mime: true, size: true, durationMs: true } },
-        reactions: { select: { emoji: true, userId: true } },
-      },
+      include: INCLUDE,
     });
-
-    if (channelNeedsReadReceipt(messages, member.lastReadAt, user.id)) {
-      await db.channelMember.update({
-        where: { channelId_userId: { channelId, userId: user.id } },
-        data: { lastReadAt: new Date() },
-      });
-    }
-
-    return NextResponse.json({ messages });
+  } else {
+    const page = await db.message.findMany({
+      where: { ...ok.where, deletedAt: null, ...(before ? { createdAt: { lt: before } } : {}) },
+      orderBy: { createdAt: 'desc' },
+      take: PAGE + 1,
+      include: INCLUDE,
+    });
+    hasMore = page.length > PAGE;
+    rows = page.slice(0, PAGE).reverse();
   }
 
-  if (entityType && entityId) {
-    const capability = THREAD_CAPABILITY[entityType];
-    if (!capability || !can(user, capability)) {
-      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-    }
-    const messages = await db.message.findMany({
-      where: { entityType, entityId, deletedAt: null },
-      orderBy: { createdAt: 'asc' },
-      take: 200,
-      include: {
-        author: { select: { id: true, name: true, accent: true, title: true } },
-        files: { select: { id: true, name: true, mime: true, size: true, durationMs: true } },
-        reactions: { select: { emoji: true, userId: true } },
-      },
+  if (ok.member && channelNeedsReadReceipt(rows, ok.member.lastReadAt, user.id)) {
+    await db.channelMember.update({
+      where: { channelId_userId: { channelId: ok.where.channelId!, userId: user.id } },
+      data: { lastReadAt: new Date() },
     });
-    return NextResponse.json({ messages });
   }
 
-  return NextResponse.json({ error: 'channelId or entity required' }, { status: 400 });
+  return NextResponse.json({
+    messages: rows.map(shape),
+    hasMore,
+    cursor: cursor.toISOString(),
+    topic: topicFor(ok.scope),
+  });
+}
+
+/** Edit your own message. */
+export async function PATCH(req: Request) {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  const { id, body } = await req.json().catch(() => ({}));
+  const message = id ? await db.message.findUnique({ where: { id: String(id) } }) : null;
+  if (!message || message.deletedAt) return NextResponse.json({ error: 'not found' }, { status: 404 });
+  if (message.authorId !== user.id) return NextResponse.json({ error: 'You can only edit your own messages.' }, { status: 403 });
+  const next = text(body, BOUND.body);
+  if (!next) return NextResponse.json({ error: 'A message cannot be empty. Delete it instead.' }, { status: 400 });
+
+  const updated = await db.message.update({
+    where: { id: message.id },
+    data: { body: next, editedAt: new Date() },
+    include: INCLUDE,
+  });
+  await ping(scopeOf(message));
+  return NextResponse.json({ message: shape(updated) });
+}
+
+/** Delete your own message; admins can remove anyone's. Leaves a tombstone. */
+export async function DELETE(req: Request) {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  const id = new URL(req.url).searchParams.get('id');
+  const message = id ? await db.message.findUnique({ where: { id } }) : null;
+  if (!message || message.deletedAt) return NextResponse.json({ error: 'not found' }, { status: 404 });
+  if (message.authorId !== user.id && !can(user, 'admin:users')) {
+    return NextResponse.json({ error: 'You can only delete your own messages.' }, { status: 403 });
+  }
+  await db.message.update({ where: { id: message.id }, data: { deletedAt: new Date(), body: '' } });
+  await ping(scopeOf(message));
+  return NextResponse.json({ ok: true });
+}
+
+function scopeOf(m: { channelId: string | null; entityType: string | null; entityId: string | null }): Scope {
+  return m.channelId ? { channelId: m.channelId } : { entityType: m.entityType ?? '', entityId: m.entityId ?? '' };
 }
 
 function entityLink(entityType: string | null, entityId: string | null) {
@@ -85,7 +187,6 @@ function entityLink(entityType: string | null, entityId: string | null) {
   if (entityType === 'task') return `/tasks/${entityId}`;
   if (entityType === 'speaker') return `/speakers/${entityId}`;
   if (entityType === 'event') return `/events/${entityId}`;
-  if (entityType === 'question') return '/questions';
   if (entityType === 'sponsor') return '/sponsors';
   if (entityType === 'vendor') return '/logistics';
   if (entityType === 'session') return '/agenda';
@@ -107,7 +208,6 @@ async function entityOwnerId(entityType: string, entityId: string) {
     : entityType === 'speaker' ? await db.speaker.findUnique(query)
     : entityType === 'sponsor' ? await db.sponsor.findUnique(query)
     : entityType === 'vendor' ? await db.vendor.findUnique(query)
-    : entityType === 'question' ? await db.openQuestion.findUnique(query)
     : entityType === 'session' ? await db.session.findUnique(query)
     : entityType === 'event' ? await db.event.findUnique(query)
     : null;
@@ -128,7 +228,7 @@ export async function POST(req: Request) {
   }
 
   const payload = await req.json().catch(() => ({}));
-  const { channelId, entityType, entityId, body, fileIds } = payload;
+  const { channelId, entityType, entityId, body, fileIds, parentId } = payload;
   const messageText = text(body, BOUND.body);
   const attachments = idList(fileIds, 10);
 
@@ -150,6 +250,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'nowhere to post' }, { status: 400 });
   }
 
+  // A reply must point at a live message in the same conversation.
+  let replyTo: string | null = null;
+  const wantedParent = validId(parentId);
+  if (wantedParent) {
+    const parent = await db.message.findUnique({ where: { id: wantedParent } });
+    const same = parent && !parent.deletedAt && (channelId
+      ? parent.channelId === channelId
+      : parent.entityType === entityType && parent.entityId === entityId);
+    if (same) replyTo = parent!.id;
+  }
+
   // @mentions → notifications
   const names = Array.from(messageText.matchAll(/@([A-Za-z][\w.-]*)/g)).map((m) => m[1].toLowerCase());
   const mentioned = names.length
@@ -167,12 +278,9 @@ export async function POST(req: Request) {
       entityType: entityType ?? null,
       entityId: entityId ?? null,
       mentions: mentioned.map((m) => m.id).join(',') || null,
+      parentId: replyTo,
     },
-      include: {
-        author: { select: { id: true, name: true, accent: true, title: true } },
-        files: { select: { id: true, name: true, mime: true, size: true, durationMs: true } },
-        reactions: { select: { emoji: true, userId: true } },
-      },
+    include: INCLUDE,
   });
 
   // Attach uploads the author just made, then re-read so the reply carries them.
@@ -245,5 +353,6 @@ export async function POST(req: Request) {
     });
   }
 
-  return NextResponse.json({ message });
+  await ping(channelId ? { channelId } : { entityType, entityId });
+  return NextResponse.json({ message: shape(message) });
 }
