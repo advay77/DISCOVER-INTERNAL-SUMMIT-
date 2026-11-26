@@ -50,6 +50,7 @@ export const CAPABILITIES: CapabilityDef[] = [
 
   // Attendees
   { key: 'attendees:view', group: 'Attendees', label: 'See registrations', help: 'Counts, companies and ticket types.', scopes: ['all', 'none'] },
+  { key: 'attendees:edit', group: 'Attendees', label: 'Add and edit attendees', help: 'Register people by hand, change ticket, payment and status.', scopes: ['all', 'none'] },
   { key: 'attendees:contact', group: 'Attendees', label: 'See attendee emails', help: 'Personal data of registrants.', scopes: ['all', 'none'], sensitive: true },
   { key: 'attendees:export', group: 'Attendees', label: 'Export the attendee list', help: 'Download as CSV.', scopes: ['all', 'none'], sensitive: true },
 
@@ -139,7 +140,7 @@ export const DEFAULT_MATRIX: Record<string, Record<string, Scope>> = {
     'sponsors:view': 'all', 'sponsors:edit': 'none',
     'vendors:view': 'all', 'vendors:edit': 'none',
     'finance:view': 'none', 'finance:edit': 'none',
-    'attendees:view': 'all', 'attendees:contact': 'all', 'attendees:export': 'none',
+    'attendees:view': 'all', 'attendees:edit': 'none', 'attendees:contact': 'all', 'attendees:export': 'none',
     'files:view': 'all', 'files:upload': 'all', 'files:delete': 'none',
     'chat:use': 'all', 'chat:dm': 'all', 'chat:channel.create': 'all', 'chat:announce': 'workstream',
     'team:view': 'all', 'team:contact': 'all',
@@ -147,3 +148,12 @@ export const DEFAULT_MATRIX: Record<string, Record<string, Scope>> = {
     'admin:users': 'none', 'admin:roles': 'none', 'admin:permissions': 'none', 'admin:event': 'none',
   },
 };
+
+/**
+ * The scope a built-in role gets for a capability that has no stored row yet —
+ * which is what happens when a new capability ships to a database seeded
+ * before it existed. Custom roles fall back to `none`.
+ */
+export function defaultScope(roleKey: string, capability: string): Scope {
+  return DEFAULT_MATRIX[roleKey]?.[capability] ?? 'none';
+}

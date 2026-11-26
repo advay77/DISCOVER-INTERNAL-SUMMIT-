@@ -627,3 +627,143 @@ export async function updateEvent(data: FormData) {
   revalidatePath('/dashboard');
   return { ok: true };
 }
+
+/* -------------------------------------------------------------- attendees */
+
+const TICKET_TYPES = ['General', 'VIP', 'Student', 'Speaker'] as const;
+const ATTENDEE_STATUSES = ['Confirmed', 'Pending', 'Waitlist', 'Cancelled'] as const;
+
+export async function saveAttendee(data: FormData) {
+  const user = await requireUser();
+  if (!can(user, 'attendees:edit')) return { error: 'You cannot add or edit attendees.' };
+
+  const id = validId(data.get('id'));
+  const existing = id ? await db.attendee.findUnique({ where: { id } }) : null;
+  if (id && !existing) return { error: 'Attendee not found.' };
+
+  const name = text(data.get('name'), BOUND.name);
+  if (!name) return { error: 'An attendee needs a name.' };
+
+  // Email is personal data: only someone who can see it may set it. Everyone
+  // else leaves the stored address untouched.
+  let email = existing?.email ?? null;
+  if (can(user, 'attendees:contact')) {
+    const raw = text(data.get('email'), BOUND.email);
+    email = raw ? validEmail(raw) : null;
+    if (raw && !email) return { error: 'That email address does not look right.' };
+  }
+
+  const fields = {
+    name,
+    company: optionalText(data.get('company'), BOUND.name),
+    email,
+    ticketType: oneOf(data.get('ticketType'), TICKET_TYPES, 'General'),
+    status: oneOf(data.get('status'), ATTENDEE_STATUSES, 'Pending'),
+    paid: data.get('paid') === 'on' || data.get('paid') === 'true',
+  };
+
+  if (existing) {
+    await db.attendee.update({ where: { id: existing.id }, data: fields });
+  } else {
+    const event = await db.event.findFirst({ where: { isCurrent: true }, select: { id: true } });
+    await db.attendee.create({ data: { ...fields, eventId: event?.id ?? null } });
+  }
+  await log(user.id, existing ? 'updated' : 'registered', 'attendee', `${name} · ${fields.ticketType} · ${fields.status}`);
+  revalidatePath('/attendees');
+  revalidatePath('/dashboard');
+  return { ok: true };
+}
+
+export async function deleteAttendee(id: string) {
+  const user = await requireUser();
+  if (!can(user, 'attendees:edit')) return { error: 'You cannot remove attendees.' };
+  const aid = validId(id);
+  const row = aid ? await db.attendee.findUnique({ where: { id: aid } }) : null;
+  if (!row) return { error: 'Attendee not found.' };
+  await db.attendee.delete({ where: { id: row.id } });
+  await log(user.id, 'removed', 'attendee', row.name);
+  revalidatePath('/attendees');
+  revalidatePath('/dashboard');
+  return { ok: true };
+}
+
+/* ---------------------------------------------------------------- vendors */
+
+const PAYMENT_STATUSES = ['Not started', 'Quoted', 'Deposit paid', 'Paid'] as const;
+
+/** Workstream + ownership the vendors:edit scope is checked against. */
+async function vendorRecord(workstreamId: string | null, ownerId: string | null) {
+  const ws = workstreamId
+    ? await db.workstream.findUnique({ where: { id: workstreamId }, select: { id: true, restricted: true } })
+    : null;
+  return { ownerId, workstreamId: ws?.id ?? null, workstream: ws };
+}
+
+export async function saveVendor(data: FormData) {
+  const user = await requireUser();
+  if (scopeOf(user, 'vendors:edit') === 'none') return { error: 'You cannot edit vendors.' };
+
+  const id = validId(data.get('id'));
+  const existing = id ? await db.vendor.findUnique({ where: { id }, include: { workstream: true } }) : null;
+  if (id && !existing) return { error: 'Vendor not found.' };
+  if (existing && !allows(user, 'vendors:edit', existing)) return { error: 'This vendor is outside what you can edit.' };
+
+  const name = text(data.get('name'), BOUND.name);
+  const service = text(data.get('service'), BOUND.shortText);
+  if (!name) return { error: 'A vendor needs a name.' };
+  if (!service) return { error: 'Say what the vendor supplies.' };
+
+  const ownerId = validId(data.get('ownerId'));
+  const target = await vendorRecord(validId(data.get('workstreamId')), ownerId);
+  if (!allows(user, 'vendors:edit', target)) {
+    return { error: 'Pick one of your own workstreams, or make yourself the owner.' };
+  }
+
+  // Amounts are Finance: without finance:edit the stored amount is kept.
+  let amount = existing?.amount ?? null;
+  if (scopeOf(user, 'finance:edit') !== 'none') {
+    const raw = String(data.get('amount') ?? '').replace(/[$,\s]/g, '');
+    if (raw) {
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 0 || n > 10_000_000) return { error: 'The amount must be a positive number.' };
+      amount = Math.round(n * 100) / 100;
+    } else amount = null;
+  }
+
+  const fields = {
+    name,
+    service,
+    paymentMethod: optionalText(data.get('paymentMethod'), BOUND.name),
+    paymentStatus: oneOf(data.get('paymentStatus'), PAYMENT_STATUSES, 'Not started'),
+    dueDate: validDate(data.get('dueDate')),
+    notes: optionalText(data.get('notes'), BOUND.notes),
+    ownerId: target.ownerId,
+    workstreamId: target.workstreamId,
+    amount,
+  };
+
+  if (existing) {
+    await db.vendor.update({ where: { id: existing.id }, data: fields });
+  } else {
+    const event = await db.event.findFirst({ where: { isCurrent: true }, select: { id: true } });
+    await db.vendor.create({ data: { ...fields, eventId: event?.id ?? null } });
+  }
+  await log(user.id, existing ? 'updated' : 'added', 'vendor', `${name} · ${service} · ${fields.paymentStatus}`);
+  if (fields.ownerId && fields.ownerId !== existing?.ownerId) {
+    await notify(fields.ownerId, user.id, `${user.name} made you the owner of vendor ${name}`, '/logistics');
+  }
+  revalidatePath('/logistics');
+  return { ok: true };
+}
+
+export async function deleteVendor(id: string) {
+  const user = await requireUser();
+  const vid = validId(id);
+  const row = vid ? await db.vendor.findUnique({ where: { id: vid }, include: { workstream: true } }) : null;
+  if (!row) return { error: 'Vendor not found.' };
+  if (!allows(user, 'vendors:edit', row)) return { error: 'You cannot remove this vendor.' };
+  await db.vendor.delete({ where: { id: row.id } });
+  await log(user.id, 'removed', 'vendor', row.name);
+  revalidatePath('/logistics');
+  return { ok: true };
+}
