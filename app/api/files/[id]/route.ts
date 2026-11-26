@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { currentUser } from '@/lib/auth';
 import { can } from '@/lib/authz';
 import { db } from '@/lib/db';
-import { getFile, signDownload, INLINE_SAFE } from '@/lib/storage';
+import { getFile, signDownload, dropFile, INLINE_SAFE } from '@/lib/storage';
 import { id as validId } from '@/lib/validate';
 
 /**
@@ -58,4 +58,30 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   } catch {
     return NextResponse.json({ error: 'file missing' }, { status: 404 });
   }
+}
+
+/**
+ * Remove a file from the library: the uploader may remove their own; anyone
+ * with files:delete may remove any. A file attached to a chat message stays —
+ * delete the message instead, so the conversation is not left with a hole.
+ */
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  const { id } = await params;
+  if (!validId(id)) return NextResponse.json({ error: 'not found' }, { status: 404 });
+
+  const asset = await db.fileAsset.findUnique({ where: { id } });
+  if (!asset) return NextResponse.json({ error: 'not found' }, { status: 404 });
+  if (asset.uploaderId !== user.id && !can(user, 'files:delete')) {
+    return NextResponse.json({ error: 'You can only delete files you uploaded.' }, { status: 403 });
+  }
+  if (asset.messageId) {
+    return NextResponse.json({ error: 'This file is attached to a message. Delete the message instead.' }, { status: 409 });
+  }
+
+  await db.fileAsset.delete({ where: { id: asset.id } });
+  await dropFile(asset).catch(() => {});
+  await db.auditLog.create({ data: { actorId: user.id, action: 'file.delete', target: asset.name, before: asset.folder } });
+  return NextResponse.json({ ok: true });
 }
