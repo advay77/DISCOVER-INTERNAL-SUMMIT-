@@ -81,13 +81,13 @@ export default async function TeamPage() {
                 <p className="text-[12.5px] text-ink-muted">{p.title}</p>
                 {p.company && <p className="text-[12px] text-ink-faint">{p.company}</p>}
                 {showContact && <p className="mt-1 truncate text-[12px] text-ink-faint">{p.email}</p>}
-                <span className={p.role.key === 'president' ? 'mt-3 rounded-full bg-lime px-2.5 py-[3px] text-[11.5px] font-semibold text-lime-ink' : 'mt-3 rounded-full bg-navy px-2.5 py-[3px] text-[11.5px] font-medium text-white'}>
+                <span className={p.role.key === 'president' ? 'mt-3 rounded-full bg-accent px-2.5 py-[3px] text-[11.5px] font-semibold text-accent-ink' : 'mt-3 rounded-full bg-navy px-2.5 py-[3px] text-[11.5px] font-medium text-white'}>
                   {p.role.name}
                 </span>
               </>
             );
             return href ? (
-              <Link key={p.id} href={href} className="subcard flex flex-col items-center p-4 text-center transition hover:ring-1 hover:ring-line-strong">
+              <Link prefetch={false} key={p.id} href={href} className="subcard flex flex-col items-center p-4 text-center transition hover:ring-1 hover:ring-line-strong">
                 {inner}
               </Link>
             ) : (
@@ -127,7 +127,7 @@ export default async function TeamPage() {
                     <Avatar name={w.lead.name} accent={w.lead.accent} size={34} />
                     <div className="min-w-0">
                       {profileHref(w.lead.id) ? (
-                        <Link href={profileHref(w.lead.id)!} className="block truncate text-[14px] font-semibold text-ink hover:underline">
+                        <Link prefetch={false} href={profileHref(w.lead.id)!} className="block truncate text-[14px] font-semibold text-ink hover:underline">
                           {w.lead.name}
                         </Link>
                       ) : (
@@ -149,7 +149,7 @@ export default async function TeamPage() {
                         </>
                       );
                       return href ? (
-                        <Link key={m.id} href={href} title={m.user.role.name} className="inline-flex items-center gap-1.5 rounded-full bg-panel py-0.5 pl-0.5 pr-2.5 hover:bg-line">
+                        <Link prefetch={false} key={m.id} href={href} title={m.user.role.name} className="inline-flex items-center gap-1.5 rounded-full bg-panel py-0.5 pl-0.5 pr-2.5 hover:bg-line">
                           {chip}
                         </Link>
                       ) : (
@@ -163,7 +163,7 @@ export default async function TeamPage() {
                 {w.members.length === 0 && <p className="mt-3 text-[13px] text-ink-faint">No members yet.</p>}
 
                 {seeTasks && (
-                  <Link href={`/tasks?ws=${w.id}`} className="mt-4 block rounded-xl p-1 transition hover:bg-panel">
+                  <Link prefetch={false} href={`/tasks?ws=${w.id}`} className="mt-4 block rounded-xl p-1 transition hover:bg-panel">
                     <div className="flex items-center justify-between text-[12.5px]">
                       <span className="text-ink-muted">Tasks done</span>
                       <span className="font-semibold text-ink">

@@ -48,7 +48,7 @@ export function Uploader({ folders }: { folders: string[] }) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/35 p-4 py-10 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/45 p-4 py-10">
           <form onSubmit={submit} className="card my-auto w-full max-w-md space-y-4 p-6">
             <div className="flex items-center justify-between">
               <h2 className="text-[18px] font-semibold text-ink">Upload a file</h2>
@@ -66,7 +66,7 @@ export function Uploader({ folders }: { folders: string[] }) {
             <label
               className={
                 'relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-8 text-center transition ' +
-                (over ? 'border-navy bg-lime-100/60' : picked ? 'border-forest/40 bg-forest-100/50' : 'border-line-strong bg-panel hover:border-ink/40')
+                (over ? 'border-navy bg-accent-100/60' : picked ? 'border-forest/40 bg-forest-100/50' : 'border-line-strong bg-panel hover:border-ink/40')
               }
               onDragEnter={() => setOver(true)}
               onDragLeave={() => setOver(false)}

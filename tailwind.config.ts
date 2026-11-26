@@ -6,7 +6,7 @@ const v = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
  * DISCOVER OS design tokens.
  *
  * Register: a calm operations desk. Warm grey canvas, white rounded panels,
- * near-black for primary actions and the active nav item, and one lime accent
+ * near-black for primary actions and the active nav item, and one accent accent
  * reserved for the single figure or card that should catch the eye.
  *
  * The `navy` scale keeps its name so every existing `bg-navy` / `text-navy`
@@ -32,11 +32,12 @@ const config: Config = {
           700: v('navy-700'),
           600: v('navy-600'),
         },
-        lime: {
-          DEFAULT: '#E3F24A',
-          600: '#CFE02F',
-          100: v('lime-100'),
-          ink: '#2A2E05',
+        // DISCOVER blue, from the logo ("DISC"). White text on it in both themes.
+        accent: {
+          DEFAULT: '#1270BA',
+          600: '#0E5C9B',
+          100: v('accent-100'),
+          ink: '#FFFFFF',
         },
         brand: {
           DEFAULT: v('brand'),
@@ -59,8 +60,8 @@ const config: Config = {
         panel: v('panel'),
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
-        display: ['"Inter Tight"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-inter)', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+        display: ['var(--font-inter-tight)', 'var(--font-inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         card: '20px',

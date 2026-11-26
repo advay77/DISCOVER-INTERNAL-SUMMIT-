@@ -244,8 +244,8 @@ export function Thread({
     const node = document.getElementById(`msg-${id}`);
     if (!node) return;
     node.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    node.classList.add('ring-2', 'ring-lime');
-    setTimeout(() => node.classList.remove('ring-2', 'ring-lime'), 1600);
+    node.classList.add('ring-2', 'ring-accent');
+    setTimeout(() => node.classList.remove('ring-2', 'ring-accent'), 1600);
   }
 
   /* ----------------------------------------------------------- uploads */
@@ -443,7 +443,7 @@ export function Thread({
         onScroll={onScroll}
         className={clsx(
           compact ? 'max-h-96 flex-1 overflow-y-auto pr-1' : 'flex-1 overflow-y-auto px-3 py-4 sm:px-5',
-          dragging && 'bg-lime-100/40',
+          dragging && 'bg-accent-100/40',
         )}
         aria-live="polite"
       >
@@ -458,7 +458,7 @@ export function Thread({
         {loading && visible.length === 0 && <p className="py-6 text-center text-[13px] text-ink-faint">Loading…</p>}
         {!loading && visible.length === 0 && (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-lime text-[20px]">💬</span>
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-[20px]">💬</span>
             <p className="mt-3 max-w-xs text-[13px] text-ink-faint">{emptyHint ?? 'Nothing here yet. Start the conversation.'}</p>
           </div>
         )}
@@ -499,7 +499,7 @@ export function Thread({
                 className={clsx(
                   'group relative flex gap-3 rounded-2xl px-2.5 transition',
                   grouped ? 'py-0.5' : 'mt-1.5 py-1.5',
-                  mine ? 'bg-lime-100/45 hover:bg-lime-100/70' : 'hover:bg-panel/70',
+                  mine ? 'bg-accent-100/45 hover:bg-accent-100/70' : 'hover:bg-panel/70',
                   m.pending && 'opacity-60',
                 )}
               >
@@ -667,7 +667,7 @@ export function Thread({
       {/* Composer */}
       <div className={compact ? 'mt-3' : 'px-3 pb-3 pt-2 sm:px-5 sm:pb-4'}>
         {replyTo && (
-          <div className="mb-2 flex items-center gap-2 rounded-xl border-l-[3px] border-lime-600 bg-panel px-3 py-2">
+          <div className="mb-2 flex items-center gap-2 rounded-xl border-l-[3px] border-accent-600 bg-panel px-3 py-2">
             <div className="min-w-0 flex-1">
               <p className="text-[11.5px] font-semibold text-ink-muted">
                 Replying to {replyTo.author.id === meId ? 'yourself' : replyTo.author.name}
@@ -715,7 +715,7 @@ export function Thread({
 
         <form
           onSubmit={send}
-          className="flex items-end gap-1 rounded-[22px] border border-line-strong bg-white p-1.5 transition focus-within:border-ink/40 focus-within:ring-2 focus-within:ring-lime/50"
+          className="flex items-end gap-1 rounded-[22px] border border-line-strong bg-white p-1.5 transition focus-within:border-ink/40 focus-within:ring-2 focus-within:ring-accent/50"
         >
           <input ref={fileInput} type="file" multiple hidden onChange={(e) => e.target.files && upload(e.target.files)} />
 

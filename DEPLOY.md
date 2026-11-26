@@ -24,7 +24,7 @@ a direct one to create tables — a pooler cannot run schema changes.
 
 | Vercel variable | Which Supabase string | Note |
 |---|---|---|
-| `DATABASE_URL` | **Transaction pooler**, port `6543` | append `?pgbouncer=true&connection_limit=1` |
+| `DATABASE_URL` | **Transaction pooler**, port `6543` | append `?pgbouncer=true&connection_limit=5` (see *Speed* below) |
 | `DIRECT_URL` | **Session pooler** or **Direct connection**, port `5432` | used only for schema pushes |
 
 Both contain your database password where it says `[YOUR-PASSWORD]` — replace it.
@@ -98,6 +98,26 @@ npm run use:sqlite; npx prisma generate
   every 30 seconds as a safety net.
 - **Calls** open a private Jitsi Meet room per channel (free, in the browser).
   Jitsi may ask the first person in a room to sign in to start it.
+
+## Speed — two settings that matter more than any code
+
+Every page reads from Postgres several times. How long each read takes is
+set by two things outside the code:
+
+1. **Put the app next to the database.** Vercel runs functions in Washington
+   DC (`iad1`) unless told otherwise. If the Supabase project is elsewhere
+   (Mumbai, Singapore, Frankfurt…), every query crosses an ocean — about
+   150–250 ms each. Find the region in Supabase → Project Settings → General,
+   then in Vercel → Settings → Functions → **Function Region** pick the
+   closest one (Mumbai `bom1`, Singapore `sin1`, Frankfurt `fra1`, Washington
+   `iad1`…). Redeploy.
+2. **Let a page run its queries side by side.** With `connection_limit=1`
+   Prisma runs every query of a page one after another. `connection_limit=5`
+   lets them overlap; Supabase's transaction pooler is built for this. Change
+   the end of `DATABASE_URL` in Vercel and redeploy.
+
+To check: open a page, then Vercel → Logs; the function duration should be a
+few hundred milliseconds, not seconds.
 
 ## Realtime chat (optional, recommended)
 

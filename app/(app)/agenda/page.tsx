@@ -1,5 +1,6 @@
 import { requireCan, can } from '@/lib/authz';
 import { db } from '@/lib/db';
+import { currentEvent } from '@/lib/event';
 import { PageHeader, Pill, Empty, StatTile } from '@/components/ui';
 import { dateRange, longDate } from '@/lib/format';
 import { durationMinutes, toMinutes } from '@/lib/agenda';
@@ -8,7 +9,7 @@ import { PrintButton } from './PrintButton';
 
 export default async function AgendaPage() {
   const user = await requireCan('agenda:view');
-  const event = await db.event.findFirst({ where: { isCurrent: true } });
+  const event = await currentEvent();
   if (!event) return <Empty title="No active cycle" hint="Create one in Admin → Event." />;
 
   const editable = can(user, 'agenda:edit');

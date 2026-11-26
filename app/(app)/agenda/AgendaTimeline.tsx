@@ -26,7 +26,7 @@ type Option = { id: string; name: string };
 
 /** Accent per kind: the dot on the rail and the stripe on the card. */
 const KIND_STYLE: Record<string, { dot: string; chip: string; quiet?: boolean }> = {
-  keynote: { dot: 'bg-lime ring-lime-ink/20', chip: 'bg-lime text-lime-ink' },
+  keynote: { dot: 'bg-accent ring-accent-ink/20', chip: 'bg-accent text-accent-ink' },
   panel: { dot: 'bg-brand', chip: 'bg-brand-100 text-brand' },
   session: { dot: 'bg-navy', chip: 'bg-panel text-ink' },
   gala: { dot: 'bg-brass', chip: 'bg-brass-100 text-brass' },
@@ -216,7 +216,7 @@ function SessionForm({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/35 p-4 py-10 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/45 p-4 py-10"
       role="dialog"
       aria-modal="true"
       aria-label={session ? 'Edit session' : 'Add session'}

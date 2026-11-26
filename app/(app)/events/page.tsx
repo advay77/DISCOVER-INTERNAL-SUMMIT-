@@ -47,7 +47,7 @@ export default async function EventsPage({
   const Row = ({ e }: { e: (typeof events)[number] }) => {
     const away = daysUntil(e.startDate);
     return (
-      <Link
+      <Link prefetch={false}
         href={`/events/${e.id}`}
         className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5 transition hover:bg-panel/60"
       >
@@ -123,7 +123,7 @@ export default async function EventsPage({
       </div>
 
       <div className="chip-row mb-4 flex flex-wrap gap-2">
-        <Link
+        <Link prefetch={false}
           href="/events"
           className={clsx(
             'rounded-full px-3.5 py-1.5 text-[13px] font-medium',
@@ -133,7 +133,7 @@ export default async function EventsPage({
           All
         </Link>
         {kinds.map((k) => (
-          <Link
+          <Link prefetch={false}
             key={k}
             href={`/events?kind=${k}`}
             className={clsx(

@@ -96,7 +96,7 @@ export function Directory({ people, roles }: { people: Person[]; roles: { key: s
             </>
           );
           return p.href ? (
-            <Link key={p.id} href={p.href} className="subcard flex items-start gap-3 p-3.5 transition hover:ring-1 hover:ring-line-strong">
+            <Link prefetch={false} key={p.id} href={p.href} className="subcard flex items-start gap-3 p-3.5 transition hover:ring-1 hover:ring-line-strong">
               {body}
             </Link>
           ) : (

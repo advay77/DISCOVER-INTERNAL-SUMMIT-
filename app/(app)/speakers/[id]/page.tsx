@@ -23,7 +23,7 @@ export default async function SpeakerDetail({ params }: { params: Promise<{ id: 
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <Link href="/speakers" className="mb-3 inline-block text-[13px] font-medium text-ink-muted hover:text-brand">
+      <Link prefetch={false} href="/speakers" className="mb-3 inline-block text-[13px] font-medium text-ink-muted hover:text-brand">
         ← Back to speakers
       </Link>
 

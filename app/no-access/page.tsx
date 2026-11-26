@@ -30,7 +30,7 @@ export default async function NoAccess({
           )}{' '}
           The President can change this in Admin → Roles &amp; Permissions.
         </p>
-        <Link href="/dashboard" className="btn-primary mt-6 w-full">
+        <Link prefetch={false} href="/dashboard" className="btn-primary mt-6 w-full">
           Back to the dashboard
         </Link>
       </div>

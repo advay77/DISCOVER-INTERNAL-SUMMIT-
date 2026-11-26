@@ -262,9 +262,9 @@ in a live grid. Changes apply immediately and are audited.
 | Element | Decision |
 |---|---|
 | **Brand** | The DISCOVER Supply Chain logo in the sidebar, phone header and login. On dark surfaces it sits on a white plate |
-| **Canvas** | Warm grey background, white rounded panels (20 px), soft shadows, no hairline-heavy tables |
-| **Colour** | Near-black for primary actions and the active nav item. One lime accent for the single figure that matters on a screen (days to go, readiness, unread). Status colours: forest (good), brass (attention), brick (late), brand blue (in progress) |
-| **Type** | Inter for text, Inter Tight for figures and headings |
+| **Canvas** | Cool grey background, white rounded panels (20 px), soft shadows, no hairline-heavy tables |
+| **Colour** | Taken from the logo. DISCOVER navy `#203889` for primary actions and the active nav item; DISCOVER blue `#1270BA` as the one accent for the figure that matters on a screen (days to go, readiness, unread). Cool grey canvas. Status colours: forest (good), brass (attention), brick (late) |
+| **Type** | Inter for text, Inter Tight for figures and headings — self-hosted, no request to Google at page load |
 | **Theme** | Light and dark, from one set of CSS variables. Toggle in the top bar and on the login page; follows the device by default; applied before first paint |
 | **Components** | Pill buttons and filter chips with counts; stat tiles; rounded modals; empty states with a next step |
 | **Responsive** | Sidebar on desktop; top bar plus bottom tab bar with a *More* sheet on phones. Kanban columns swipe on phones. Tables become cards or rows that never scroll sideways |
@@ -276,7 +276,8 @@ in a live grid. Changes apply immediately and are audited.
 | ID | Requirement | Status |
 |---|---|---|
 | N1 | Usable on a phone at conference-hall connection quality | Met — every page checked at 360–1440 px in light and dark with no horizontal overflow |
-| N2 | Light on the host | Met — changes-only polling, paused when hidden; realtime optional |
+| N2 | Light on the host | Met — changes-only polling, paused when hidden; realtime optional; one database lookup of the signed-in user per request; no link prefetching |
+| N2b | Fast on a hosted database | The dashboard needs 22 queries, down from 37. App region next to the database and `connection_limit=5` (DEPLOY.md → Speed) |
 | N3 | Same code on SQLite (local) and Postgres (hosted) | Met — provider switched at build; schema changes are additive with defaults |
 | N4 | Reduced motion respected; visible keyboard focus; labelled controls | Met |
 | N5 | Files never served from a public URL | Met — every read permission-checked; files in Supabase Storage are served through short-lived signed links |
@@ -321,7 +322,8 @@ in a live grid. Changes apply immediately and are audited.
 | **1.2 — Tasks** (PR #2) | Tasks page redesign, quick filters with counts, search, scrolling columns, case-insensitive search on Postgres | Shipped |
 | **1.3 — Summit & Admin** (PR #3) | Logo, Summit summary, editable run-of-show timeline, full admin control of people, roles and workstreams, Open Questions retired, speaker cards | Shipped |
 | **1.4 — Chat** (PR #4) | Fixed messages stopping after 200 in a channel; changes-only polling; Supabase realtime; reply, edit, delete; load older; chat redesign; Jitsi calls | Shipped |
-| **1.5 — Organisation** | Files (search, folders, typed rows, delete, drag-and-drop upload), Team (directory, workstream progress), Retro (composer, tinted columns), this PRD | This release |
+| **1.5 — Organisation** (PR #5) | Files (search, folders, typed rows, delete, drag-and-drop upload), Team (directory, workstream progress), Retro (composer, tinted columns), this PRD | Shipped |
+| **1.6 — Speed & brand** | Fewer database round-trips, no prefetch storms, instant loading state, self-hosted fonts, no Safari blur; DISCOVER navy and blue replace lime | This release |
 | **Next** | Turn on realtime in production; real accounts; confirmed dates and venue | — |
 | **Later** | Email digests of overdue tasks and mentions; calendar export of the run of show; retro → next-year playbook in one click; pinned messages; typing and online indicators | — |
 | **Later still** | Public summit page and a website archive fed by the retro | — |

@@ -44,7 +44,7 @@ export default async function LoginPage() {
             the work rather than scattered across inboxes and group chats.
           </p>
 
-          <p className="mt-10 border-l-2 border-lime pl-5 text-[13.5px] leading-relaxed text-white/70">
+          <p className="mt-10 border-l-2 border-accent pl-5 text-[13.5px] leading-relaxed text-white/70">
             What you can see follows what you do. The President sets the rest.
           </p>
         </div>

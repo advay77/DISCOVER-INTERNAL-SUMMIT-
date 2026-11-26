@@ -5,6 +5,9 @@ import { Sidebar, type NavEntry } from '@/components/Sidebar';
 import { MobileTabBar } from '@/components/MobileTabBar';
 import { Topbar } from '@/components/Topbar';
 import { dateRange, daysUntil } from '@/lib/format';
+import { currentEvent } from '@/lib/event';
+import { Suspense } from 'react';
+import { NavProgress } from '@/components/NavProgress';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -13,16 +16,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const taskWhere: any = scopeFilter(user, 'tasks:view');
 
   const now = new Date();
-  const [event, openTasks, overdue, unread, notices] = await Promise.all([
-    db.event.findFirst({
-      where: { isCurrent: true },
-      select: { name: true, startDate: true, endDate: true, city: true },
-    }),
-    db.task.count({ where: { ...taskWhere, status: { not: 'done' } } }),
-    db.task.count({ where: { AND: [taskWhere, { status: { not: 'done' }, dueDate: { lt: now } }] } }),
+  const [event, open, unread, notices] = await Promise.all([
+    currentEvent(),
+    // One query for both sidebar figures: open tasks and how many are overdue.
+    db.task.findMany({ where: { AND: [taskWhere, { status: { not: 'done' } }] }, select: { dueDate: true } }),
     countUnread(user.id),
     db.notification.count({ where: { userId: user.id, readAt: null } }),
   ]);
+
+  const openTasks = open.length;
+  const overdue = open.filter((t) => t.dueDate && t.dueDate < now).length;
 
   const nav: NavEntry[] = [
     { href: '/dashboard', label: 'Dashboard', icon: 'dashboard', group: '' },
@@ -61,6 +64,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen">
+      <Suspense fallback={null}>
+        <NavProgress />
+      </Suspense>
       <Sidebar
         nav={nav}
         eventName={event?.name ?? 'No active cycle'}
