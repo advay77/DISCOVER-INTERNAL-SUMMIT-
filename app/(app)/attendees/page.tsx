@@ -1,7 +1,8 @@
 import { requireCan, can } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { currentEvent } from '@/lib/event';
-import { PageHeader, Card, StatusPill, Pill, StatTile, Bar } from '@/components/ui';
+import { PageHeader, Card, StatTile, Bar } from '@/components/ui';
+import { AttendeeList } from './AttendeeList';
 import { IconAttendees, IconCheck, IconClock, IconTask } from '@/components/icons';
 import { pct } from '@/lib/format';
 
@@ -11,14 +12,16 @@ export default async function AttendeesPage() {
 
   const [event, attendees] = await Promise.all([
     currentEvent(),
-    db.attendee.findMany({ orderBy: { createdAt: 'desc' }, take: 300 }),
+    db.attendee.findMany({ orderBy: { createdAt: 'desc' }, take: 1000 }),
   ]);
 
+  const active = attendees.filter((a) => a.status !== 'Cancelled');
+  const paying = active.filter((a) => a.paid).length;
   const confirmed = attendees.filter((a) => a.status === 'Confirmed').length;
   const pending = attendees.filter((a) => a.status === 'Pending').length;
   const waitlist = attendees.filter((a) => a.status === 'Waitlist').length;
-  const orgs = new Set(attendees.map((a) => a.company)).size;
-  const students = attendees.filter((a) => a.ticketType === 'Student').length;
+  const orgs = new Set(active.map((a) => a.company?.trim().toLowerCase()).filter(Boolean)).size;
+  const students = active.filter((a) => a.ticketType === 'Student').length;
 
   return (
     <div className="mx-auto max-w-[1440px]">
@@ -28,7 +31,7 @@ export default async function AttendeesPage() {
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatTile value={attendees.length} label="Total registered" tone="navy" icon={<IconAttendees size={17} />} />
+        <StatTile value={active.length} label="Total registered" tone="navy" icon={<IconAttendees size={17} />} />
         <StatTile value={confirmed} label="Confirmed" tone="ok" icon={<IconCheck size={17} />} />
         <StatTile value={pending} label="Pending" tone="warn" icon={<IconClock size={17} />} />
         <StatTile value={waitlist} label="Waitlist" tone="brand" icon={<IconTask size={17} />} />
@@ -41,11 +44,11 @@ export default async function AttendeesPage() {
               <div className="flex items-baseline justify-between">
                 <span className="text-[13px] font-medium text-ink">Paying registrants</span>
                 <span className="text-[13px] text-ink-muted">
-                  {confirmed} / {event.goalRegistrants}
+                  {paying} / {event.goalRegistrants}
                 </span>
               </div>
               <div className="mt-2">
-                <Bar value={pct(confirmed, event.goalRegistrants)} />
+                <Bar value={pct(paying, event.goalRegistrants)} />
               </div>
             </div>
             <div>
@@ -65,57 +68,33 @@ export default async function AttendeesPage() {
                 <span className="text-[13px] text-ink-muted">{students}</span>
               </div>
               <div className="mt-2">
-                <Bar value={pct(students, Math.max(1, attendees.length))} tone="#D97708" />
+                <Bar value={pct(students, Math.max(1, active.length))} tone="#D97708" />
               </div>
             </div>
           </div>
         </Card>
       )}
 
-      <Card
-        title="Registrations"
-        action={
+      <AttendeeList
+        attendees={attendees.map((a) => ({
+          id: a.id,
+          name: a.name,
+          company: a.company,
+          email: showContact ? a.email : null,
+          ticketType: a.ticketType,
+          status: a.status,
+          paid: a.paid,
+        }))}
+        canEdit={can(user, 'attendees:edit')}
+        showContact={showContact}
+        exportAction={
           can(user, 'attendees:export') ? (
             <a href="/api/attendees/export" className="btn-ghost btn-sm">
               Export CSV
             </a>
-          ) : (
-            <Pill tone="neutral">Export not available to you</Pill>
-          )
+          ) : null
         }
-        bodyClass="p-0 overflow-x-auto"
-      >
-        <table className="w-full min-w-[720px]">
-          <thead className="border-b border-line">
-            <tr>
-              <th className="th">Name</th>
-              <th className="th">Company</th>
-              {showContact && <th className="th">Email</th>}
-              <th className="th">Ticket</th>
-              <th className="th">Paid</th>
-              <th className="th">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {attendees.slice(0, 80).map((a) => (
-              <tr key={a.id} className="hover:bg-panel/60">
-                <td className="td font-medium text-ink">{a.name}</td>
-                <td className="td text-[13px] text-ink-muted">{a.company}</td>
-                {showContact && <td className="td text-[12.5px] text-ink-muted">{a.email}</td>}
-                <td className="td">
-                  <Pill tone={a.ticketType === 'VIP' ? 'brand' : a.ticketType === 'Student' ? 'warn' : 'neutral'}>
-                    {a.ticketType}
-                  </Pill>
-                </td>
-                <td className="td text-[13px]">{a.paid ? 'Yes' : '—'}</td>
-                <td className="td">
-                  <StatusPill status={a.status} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+      />
 
       {!showContact && (
         <p className="mt-4 text-[12.5px] text-ink-faint">

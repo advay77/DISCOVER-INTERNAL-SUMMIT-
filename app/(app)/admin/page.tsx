@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { currentEvent } from '@/lib/event';
 import { PageHeader, Card, Avatar, Pill, StatTile } from '@/components/ui';
-import { CAPABILITIES, CAPABILITY_GROUPS } from '@/lib/capabilities';
+import { CAPABILITIES, CAPABILITY_GROUPS, CAPABILITY_KEYS, defaultScope } from '@/lib/capabilities';
 import { relativeTime, longDate } from '@/lib/format';
 import { PermissionMatrix } from './PermissionMatrix';
 import { IconTeam, IconAdmin, IconChat, IconDashboard } from '@/components/icons';
@@ -104,7 +104,11 @@ export default async function AdminPage({
                 id: r.id,
                 key: r.key,
                 name: r.name,
-                permissions: Object.fromEntries(r.permissions.map((p) => [p.capability, p.scope])),
+                // A capability added after this role was seeded shows its default.
+                permissions: {
+                  ...Object.fromEntries(CAPABILITY_KEYS.map((k) => [k, defaultScope(r.key, k)])),
+                  ...Object.fromEntries(r.permissions.map((p) => [p.capability, p.scope])),
+                },
               }))}
               capabilities={CAPABILITIES}
               groups={CAPABILITY_GROUPS}

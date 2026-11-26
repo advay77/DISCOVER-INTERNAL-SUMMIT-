@@ -1,7 +1,7 @@
 import 'server-only';
 import { redirect } from 'next/navigation';
 import { currentUser, type SessionUser } from './auth';
-import type { Scope } from './capabilities';
+import { defaultScope, type Scope } from './capabilities';
 
 /**
  * One place where permission is decided.
@@ -28,7 +28,7 @@ export function scopeOf(user: Actor, capability: string): Scope {
   const row = user.role.permissions.find((p) => p.capability === capability);
   // The President can never be locked out of the permission editor.
   if (capability === 'admin:permissions' && user.role.key === 'president') return 'all';
-  return (row?.scope as Scope) ?? 'none';
+  return row ? (row.scope as Scope) : defaultScope(user.role.key, capability);
 }
 
 export function can(user: Actor, capability: string): boolean {
