@@ -10,6 +10,9 @@ import { NewChannel, ChannelMembers } from '@/components/ChannelAdmin';
 import { BrowseChannels } from '@/components/BrowseChannels';
 import { ChannelSwitcher } from '@/components/ChannelSwitcher';
 import { IconHash, IconLock } from '@/components/icons';
+import { CallButton } from '@/components/CallButton';
+import { callRoomFor } from '@/lib/realtime';
+import { relativeTime } from '@/lib/format';
 
 export default async function ChannelPage({ params }: { params: Promise<{ key: string }> }) {
   const user = await requireCan('chat:use');
@@ -23,7 +26,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
   const channel = memberships.find((m) => m.channel.key === key)?.channel;
   if (!channel) notFound();
 
-  const [unreadMap, members, memberCount] = await Promise.all([
+  const [unreadMap, members, memberCount, lastMessages] = await Promise.all([
     unreadByChannel(
       user.id,
       memberships.map((m) => ({ channelId: m.channelId, lastReadAt: m.lastReadAt })),
@@ -35,7 +38,25 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
       take: 6,
     }),
     db.channelMember.count({ where: { channelId: channel.id } }),
+    // The latest message per conversation, for the previews in the rail.
+    Promise.all(
+      memberships.map((m) =>
+        db.message.findFirst({
+          where: { channelId: m.channelId, deletedAt: null },
+          orderBy: { createdAt: 'desc' },
+          select: { body: true, createdAt: true, author: { select: { id: true, name: true } }, _count: { select: { files: true } } },
+        }),
+      ),
+    ),
   ]);
+  const preview: Record<string, { text: string; at: Date } | undefined> = {};
+  memberships.forEach((m, i) => {
+    const last = lastMessages[i];
+    if (!last) return;
+    const who = last.author.id === user.id ? 'You' : last.author.name.split(' ')[0];
+    const body = last.body.replace(/\s+/g, ' ').trim() || (last._count.files ? 'sent a file' : '');
+    preview[m.channelId] = { text: `${who}: ${body}`, at: last.createdAt };
+  });
   const unread: Record<string, number> = {};
   for (const [id, n] of unreadMap) unread[id] = n;
 
@@ -51,12 +72,12 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
 
   return (
     <div className="chat-shell mx-auto flex max-w-[1400px] flex-col">
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-3 lg:grid-cols-[236px_1fr] lg:grid-rows-1 lg:gap-4">
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-3 lg:grid-cols-[288px_minmax(0,1fr)] lg:grid-rows-1 lg:gap-4">
         {/* Rail */}
         <aside className="card hidden min-h-0 flex-col overflow-hidden lg:flex">
-          <div className="border-b border-line px-4 py-3">
-            <p className="text-[14px] font-semibold text-ink">Messages</p>
-            <p className="text-[11.5px] text-ink-faint">{memberships.length} conversations</p>
+          <div className="px-4 pb-2 pt-4">
+            <p className="text-[17px] font-semibold text-ink">Messages</p>
+            <p className="text-[12px] text-ink-faint">{memberships.length} conversations</p>
           </div>
 
           <div className="flex-1 overflow-y-auto px-2 py-3">
@@ -64,9 +85,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
               g.list.length === 0 && !g.addable ? null : (
                 <div key={g.title} className="mb-4">
                   <div className="mb-1 flex items-center justify-between pl-2 pr-1">
-                    <p className="text-2xs font-semibold uppercase tracking-label text-ink-faint">
-                      {g.title}
-                    </p>
+                    <p className="text-[11.5px] font-medium text-ink-faint">{g.title}</p>
                     {g.addable && <NewChannel canCreate={canCreate} />}
                   </div>
 
@@ -79,27 +98,41 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
                         key={m.channel.id}
                         href={`/chat/${m.channel.key}`}
                         className={clsx(
-                          'flex items-center gap-2 rounded-lg px-2 py-[5px] text-[13px] transition',
-                          active
-                            ? 'bg-navy font-semibold text-white'
-                            : n > 0
-                              ? 'font-semibold text-ink hover:bg-paper'
-                              : 'text-ink-muted hover:bg-paper hover:text-ink',
+                          'flex items-start gap-2.5 rounded-2xl px-2.5 py-2 transition',
+                          active ? 'bg-navy text-white' : 'hover:bg-panel',
                         )}
                       >
-                        <Icon size={13} className={active ? 'opacity-70' : 'opacity-50'} />
-                        <span className="flex-1 truncate">{m.channel.name}</span>
-                        {m.channel.workstream && (
-                          <span
-                            className="h-1.5 w-1.5 shrink-0 rounded-full"
-                            style={{ background: m.channel.workstream.color }}
-                          />
-                        )}
-                        {n > 0 && !active && (
-                          <span className="rounded-md bg-brick px-1 text-[10px] font-bold text-snow">
-                            {n}
+                        <span
+                          className={clsx(
+                            'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                            active ? 'bg-white/15' : 'bg-panel',
+                          )}
+                          style={!active && m.channel.workstream ? { boxShadow: `inset 0 0 0 2px ${m.channel.workstream.color}` } : undefined}
+                        >
+                          <Icon size={13} className={active ? 'opacity-80' : 'text-ink-muted'} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-baseline justify-between gap-2">
+                            <span className={clsx('truncate text-[13.5px]', active || n > 0 ? 'font-semibold' : 'font-medium', !active && 'text-ink')}>
+                              {m.channel.name}
+                            </span>
+                            {preview[m.channelId] && (
+                              <span className={clsx('shrink-0 text-[10.5px]', active ? 'text-white/60' : 'text-ink-faint')}>
+                                {relativeTime(preview[m.channelId]!.at)}
+                              </span>
+                            )}
                           </span>
-                        )}
+                          <span className="flex items-center justify-between gap-2">
+                            <span className={clsx('truncate text-[12px]', active ? 'text-white/70' : n > 0 ? 'text-ink' : 'text-ink-faint')}>
+                              {preview[m.channelId]?.text ?? 'No messages yet'}
+                            </span>
+                            {n > 0 && !active && (
+                              <span className="min-w-[18px] shrink-0 rounded-full bg-lime px-1.5 text-center text-[10.5px] font-bold text-lime-ink">
+                                {n}
+                              </span>
+                            )}
+                          </span>
+                        </span>
                       </Link>
                     );
                   })}
@@ -132,9 +165,10 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
 
         {/* Conversation */}
         <section className="card flex min-h-0 flex-col overflow-hidden">
-          <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-line px-4 py-2.5 sm:px-5 sm:py-3">
-            <div className="min-w-0">
-              <h1 className="flex items-center gap-2 text-[16px] font-semibold text-ink">
+          <header className="flex items-center justify-end gap-x-3 gap-y-2 border-b border-line px-4 py-2 sm:px-5 lg:justify-between lg:py-3">
+            {/* On phones the channel switcher above already names the channel. */}
+            <div className="hidden min-w-0 lg:block">
+              <h1 className="flex items-center gap-2 text-[17px] font-semibold text-ink">
                 {channel.type === 'private' ? (
                   <IconLock size={15} className="text-ink-faint" />
                 ) : (
@@ -154,7 +188,8 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
               )}
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <CallButton channelId={channel.id} url={callRoomFor({ channelId: channel.id })} />
               <div className="hidden -space-x-1.5 sm:flex">
                 {members.map((m) => (
                   <Avatar key={m.id} name={m.user.name} accent={m.user.accent} size={24} ring />
@@ -174,6 +209,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
             meId={user.id}
             meName={user.name}
             meAccent={user.accent}
+            canModerate={canManage}
             placeholder={`Message #${channel.name}`}
             emptyHint={
               channel.purpose

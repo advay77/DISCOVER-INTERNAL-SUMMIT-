@@ -300,7 +300,7 @@ export function ChannelMembers({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-md border border-line px-2 py-1 text-2xs font-semibold uppercase tracking-label text-ink-muted transition hover:border-line-strong hover:text-ink"
+        className="btn-ghost btn-sm whitespace-nowrap"
       >
         {memberCount} members
       </button>

@@ -397,10 +397,15 @@ model Message {
   deletedAt  DateTime?
   editedAt   DateTime?
   createdAt  DateTime @default(now())
+  /// Bumped on every change — edit, delete, reaction — so a reader can ask
+  /// for "everything that changed since" instead of the whole history.
+  /// Has a database default, so adding it to existing rows is safe.
+  updatedAt  DateTime @default(now()) @updatedAt
   files      FileAsset[]
   reactions  Reaction[]
 
   @@index([channelId, createdAt])
+  @@index([channelId, updatedAt])
   @@index([entityType, entityId])
 }
 

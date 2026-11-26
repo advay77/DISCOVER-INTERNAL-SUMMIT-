@@ -93,9 +93,29 @@ npm run use:sqlite; npx prisma generate
 - **Uploads live in Postgres** when `STORAGE=db`, capped at 15 MB per file.
   If the organisation starts sharing large video, move to an object store —
   only `lib/storage.ts` has to change.
-- **Chat and the huddle poll** (3s and 1.8s). On Vercel each poll is a function
-  invocation, so at 29 people expect meaningful but modest usage. Websockets
-  are the fix when it matters.
-- **The voice huddle needs HTTPS**, which Vercel gives you. It will not work
-  over plain HTTP on a LAN address.
+- **Chat without realtime** polls every 3 seconds for *changes only*, and stops
+  while the tab is hidden. With realtime (below) it is instant and polls only
+  every 30 seconds as a safety net.
+- **Calls** open a private Jitsi Meet room per channel (free, in the browser).
+  Jitsi may ask the first person in a room to sign in to start it.
+
+## Realtime chat (optional, recommended)
+
+Messages appear instantly when Supabase Realtime is set up. Nothing about the
+messages goes over the socket — only an empty "something changed" ping on a
+topic derived from `SESSION_SECRET`; the browser then fetches through the app,
+which checks permissions as usual.
+
+In Vercel → Settings → Environment Variables (Production and Preview), add the
+values from Supabase → Project Settings → API:
+
+| Variable | Value |
+|---|---|
+| `SUPABASE_URL` | Project URL (may already be set for file storage) |
+| `SUPABASE_SECRET_KEY` | the secret / service-role key (server only; may already be set) |
+| `NEXT_PUBLIC_SUPABASE_URL` | the same Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the **anon / publishable** key — never the secret one |
+
+Redeploy. The line under the chat box changes from "Auto-refreshing" to "Live"
+with a green dot.
 - **Local development is unchanged** — `npm run dev` still uses SQLite.
