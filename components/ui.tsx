@@ -16,7 +16,7 @@ export function Avatar({
   return (
     <span
       className={clsx(
-        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold tracking-tight text-white',
+        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold tracking-tight text-snow',
         ring && 'ring-2 ring-white',
       )}
       style={{ background: accent, width: size, height: size, fontSize: size * 0.35 }}
@@ -32,7 +32,7 @@ const TONES: Record<string, { box: string; dot: string }> = {
   ok: { box: 'border-transparent bg-forest-100 text-forest', dot: '#1E7A4B' },
   warn: { box: 'border-transparent bg-brass-100 text-brass', dot: '#B4761F' },
   bad: { box: 'border-transparent bg-brick-100 text-brick', dot: '#A62B2B' },
-  brand: { box: 'border-transparent bg-brand-100 text-brand', dot: '#1F5FA8' },
+  brand: { box: 'border-transparent bg-brand-100 text-brand', dot: 'rgb(var(--brand))' },
   neutral: { box: 'border-transparent bg-panel text-ink-muted', dot: '#8F8F89' },
   navy: { box: 'border-transparent bg-navy text-white', dot: '#E3F24A' },
   lime: { box: 'border-transparent bg-lime text-lime-ink', dot: '#2A2E05' },
@@ -161,7 +161,7 @@ export function Ring({
     <div className="flex flex-col items-center">
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={r} stroke="#EEEDE8" strokeWidth="6" fill="none" />
+          <circle cx={size / 2} cy={size / 2} r={r} stroke="rgb(var(--paper))" strokeWidth="6" fill="none" />
           <circle
             cx={size / 2}
             cy={size / 2}

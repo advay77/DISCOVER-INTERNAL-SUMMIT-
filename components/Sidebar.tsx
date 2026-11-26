@@ -86,7 +86,7 @@ export function Sidebar({
         {overdue > 0 ? (
           <div className="rounded-[18px] bg-lime p-3 text-lime-ink">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-navy text-lime">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-lime-ink text-lime">
                 <IconAlert size={15} />
               </span>
               <span className="min-w-0">
@@ -96,7 +96,7 @@ export function Sidebar({
             </div>
             <Link
               href="/tasks?filter=overdue"
-              className="mt-3 flex items-center justify-between rounded-full bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink hover:bg-white/80"
+              className="mt-3 flex items-center justify-between rounded-full bg-snow px-3.5 py-2 text-[12.5px] font-semibold text-lime-ink hover:bg-snow/80"
             >
               {overdue} overdue {overdue === 1 ? 'task' : 'tasks'}
               <span aria-hidden>›</span>

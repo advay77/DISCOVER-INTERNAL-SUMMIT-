@@ -46,7 +46,7 @@ export function ChannelSwitcher({
         )}
         <span className="flex-1 truncate text-[13.5px] font-semibold text-ink">{currentName}</span>
         {totalUnread > 0 && (
-          <span className="rounded-md bg-brick px-1.5 text-[10px] font-bold text-white">
+          <span className="rounded-md bg-brick px-1.5 text-[10px] font-bold text-snow">
             {totalUnread}
           </span>
         )}
@@ -92,7 +92,7 @@ export function ChannelSwitcher({
                           <Icon size={13} className="opacity-60" />
                           <span className="flex-1 truncate">{c.name}</span>
                           {c.unread > 0 && !active && (
-                            <span className="rounded-md bg-brick px-1.5 text-[10px] font-bold text-white">
+                            <span className="rounded-md bg-brick px-1.5 text-[10px] font-bold text-snow">
                               {c.unread}
                             </span>
                           )}

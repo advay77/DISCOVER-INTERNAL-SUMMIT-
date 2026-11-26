@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Avatar } from './ui';
 import { Logo } from './Logo';
 import { NotificationBell } from './NotificationBell';
+import { ThemeToggle } from './ThemeToggle';
 import { IconSearch, IconAdmin, IconTeam, IconChat } from './icons';
 import type { NavEntry } from './Sidebar';
 
@@ -63,6 +64,7 @@ export function Topbar({
         <IconSearch size={19} />
       </Link>
 
+      <ThemeToggle />
       <NotificationBell initialCount={notices} />
 
       <div className="relative">
@@ -130,7 +132,7 @@ export function Topbar({
                   <IconChat size={15} className="text-ink-faint" />
                   Messages
                   {unread > 0 && (
-                    <span className="ml-auto rounded-md bg-brick px-1.5 text-[10px] font-bold text-white">
+                    <span className="ml-auto rounded-md bg-brick px-1.5 text-[10px] font-bold text-snow">
                       {unread}
                     </span>
                   )}

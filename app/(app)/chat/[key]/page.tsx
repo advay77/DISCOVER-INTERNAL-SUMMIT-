@@ -96,7 +96,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
                           />
                         )}
                         {n > 0 && !active && (
-                          <span className="rounded-md bg-brick px-1 text-[10px] font-bold text-white">
+                          <span className="rounded-md bg-brick px-1 text-[10px] font-bold text-snow">
                             {n}
                           </span>
                         )}

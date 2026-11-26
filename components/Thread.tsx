@@ -337,8 +337,13 @@ export function Thread({
                 )}
               </div>
 
-              {/* hover action: react */}
-              <div className="absolute right-0 top-0 hidden group-hover:block">
+              {/* hover action: react — always shown on touch screens, which have no hover */}
+              <div
+                className={clsx(
+                  'absolute right-0 top-0 hidden group-hover:block [@media(hover:none)]:block',
+                  pickerFor === m.id && '!block',
+                )}
+              >
                 <button
                   onClick={() => setPickerFor(pickerFor === m.id ? null : m.id)}
                   className="rounded-md border border-line bg-white px-1.5 py-0.5 text-[12px] text-ink-muted hover:border-line-strong"
@@ -429,7 +434,7 @@ export function Thread({
             className={clsx(
               'btn-sm shrink-0 rounded-xl border px-2.5 font-semibold transition',
               recording
-                ? 'border-brick bg-brick text-white'
+                ? 'border-brick bg-brick text-snow'
                 : 'border-line-strong bg-white text-ink-muted hover:border-navy hover:text-ink',
             )}
             title={recording ? 'Stop and attach the voice note' : 'Record a voice note'}

@@ -191,7 +191,7 @@ export function NewChannel({ canCreate, variant = 'icon' }: { canCreate: boolean
                         <span
                           className={clsx(
                             'flex h-4 w-4 items-center justify-center rounded-md border text-[10px] font-bold',
-                            on ? 'border-brand bg-brand text-white' : 'border-line-strong text-transparent',
+                            on ? 'border-brand bg-brand text-snow' : 'border-line-strong text-transparent',
                           )}
                         >
                           ✓

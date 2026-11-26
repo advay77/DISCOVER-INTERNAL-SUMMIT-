@@ -340,7 +340,7 @@ export default async function Dashboard({
                         ? {}
                         : {
                             backgroundImage:
-                              'repeating-linear-gradient(135deg, #CFCCC4 0 1px, transparent 1px 7px)',
+                              'repeating-linear-gradient(135deg, rgb(var(--line-strong)) 0 1px, transparent 1px 7px)',
                           }),
                     }}
                   />

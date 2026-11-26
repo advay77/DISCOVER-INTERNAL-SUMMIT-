@@ -1,5 +1,7 @@
 import type { Config } from 'tailwindcss';
 
+const v = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+
 /**
  * DISCOVER OS design tokens.
  *
@@ -12,44 +14,49 @@ import type { Config } from 'tailwindcss';
  */
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './lib/**/*.{ts,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
+      // Every colour reads a CSS variable (RGB channels) set in globals.css,
+      // so `.dark` on <html> re-themes the whole app. `white` is the surface
+      // colour (cards, panels) and `navy` is the high-contrast colour (primary
+      // buttons, active nav) — they swap in dark mode. `snow` stays white in
+      // both themes, for text on coloured badges and avatars.
       colors: {
+        white: v('surface'),
+        snow: '#FFFFFF',
         navy: {
-          DEFAULT: '#151515',
-          900: '#0F0F0F',
-          800: '#151515',
-          700: '#2B2B2B',
-          600: '#3D3D3D',
+          DEFAULT: v('navy'),
+          900: v('navy-900'),
+          800: v('navy'),
+          700: v('navy-700'),
+          600: v('navy-600'),
         },
         lime: {
           DEFAULT: '#E3F24A',
           600: '#CFE02F',
-          100: '#F4F9C8',
+          100: v('lime-100'),
           ink: '#2A2E05',
         },
         brand: {
-          DEFAULT: '#1F5FA8',
-          600: '#1A5192',
-          500: '#2F72BF',
-          100: '#E4EDF7',
-          50: '#F1F6FB',
+          DEFAULT: v('brand'),
+          600: v('brand-600'),
+          500: v('brand-500'),
+          100: v('brand-100'),
+          50: v('brand-50'),
         },
-        brass: {
-          DEFAULT: '#B4761F',
-          100: '#F6EDDD',
-        },
-        forest: { DEFAULT: '#1E7A4B', 100: '#E3F0E9' },
-        brick: { DEFAULT: '#A62B2B', 100: '#F6E6E6' },
+        brass: { DEFAULT: v('brass'), 100: v('brass-100') },
+        forest: { DEFAULT: v('forest'), 100: v('forest-100') },
+        brick: { DEFAULT: v('brick'), 100: v('brick-100') },
         ink: {
-          DEFAULT: '#151515',
-          muted: '#5E5E5A',
-          faint: '#8F8F89',
+          DEFAULT: v('ink'),
+          muted: v('ink-muted'),
+          faint: v('ink-faint'),
         },
-        line: '#E7E5DF',
-        'line-strong': '#D3D0C8',
-        paper: '#EEEDE8',
-        panel: '#F5F4F0',
+        line: v('line'),
+        'line-strong': v('line-strong'),
+        paper: v('paper'),
+        panel: v('panel'),
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
@@ -60,7 +67,7 @@ const config: Config = {
         tile: '16px',
       },
       boxShadow: {
-        card: '0 1px 2px rgba(20,20,20,0.04)',
+        card: 'var(--shadow-card)',
         pop: '0 16px 40px rgba(20,20,20,0.14)',
       },
       fontSize: {

@@ -3,6 +3,7 @@ import { currentUser } from '@/lib/auth';
 import { IS_DEMO } from '@/lib/db';
 import { Logo } from '@/components/Logo';
 import { LoginForm } from './LoginForm';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default async function LoginPage() {
   const user = await currentUser();
@@ -54,7 +55,8 @@ export default async function LoginPage() {
       </div>
 
       {/* Right: the form */}
-      <div className="flex items-center justify-center bg-white px-6 py-14 sm:px-14">
+      <div className="relative flex items-center justify-center bg-white px-6 py-14 sm:px-14">
+        <ThemeToggle className="absolute right-4 top-4 lg:bg-panel lg:shadow-none" />
         <div className="w-full max-w-[23rem]">
           <div className="mb-10 lg:hidden">
             <Logo tone="dark" size="md" />

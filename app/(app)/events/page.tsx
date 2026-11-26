@@ -61,7 +61,8 @@ export default async function EventsPage({
           <p className="text-[11px] text-ink-faint">{new Date(e.startDate).getFullYear()}</p>
         </div>
 
-        <div className="min-w-0 flex-1">
+        {/* min width so the badges wrap under the title on a phone instead of squeezing it */}
+        <div className="min-w-[11rem] flex-1">
           <p className="text-[14.5px] font-semibold leading-snug text-ink">{e.name}</p>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px] text-ink-muted">
             {e.guest && <span>{e.guest}</span>}
@@ -75,7 +76,7 @@ export default async function EventsPage({
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 pl-[92px] sm:pl-0">
           {e._count.tasks > 0 && (
             <span className="text-[11.5px] text-ink-faint">{e._count.tasks} tasks</span>
           )}

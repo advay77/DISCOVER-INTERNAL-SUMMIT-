@@ -70,12 +70,12 @@ export default async function AgendaPage() {
                     style={{
                       background:
                         s.kind === 'break' || s.kind === 'meal'
-                          ? '#E3E8EF'
+                          ? 'rgb(var(--line-strong))'
                           : s.kind === 'keynote'
                             ? '#1D6FE0'
                             : s.kind === 'gala'
                               ? '#D97708'
-                              : '#0B2545',
+                              : 'rgb(var(--navy))',
                     }}
                   />
 
