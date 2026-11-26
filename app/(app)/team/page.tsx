@@ -25,7 +25,7 @@ export default async function TeamPage() {
   const profileHref = (id: string) => (isAdmin || id === user.id ? `/profile/${id}` : null);
 
   return (
-    <div className="mx-auto max-w-[1180px]">
+    <div className="mx-auto max-w-[1440px]">
       <PageHeader title="Team" subtitle="Who is who, and who leads what." />
 
       <Card title="Board" className="mb-5" bodyClass="p-5">

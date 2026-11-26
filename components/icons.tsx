@@ -199,7 +199,14 @@ export const IconHash = ({ size = 16, className }: P) => (
   </svg>
 );
 
+export const IconSummary = ({ size = 16, className }: P) => (
+  <svg {...base(size, className)}>
+    <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+  </svg>
+);
+
 export const NAV_ICONS = {
+  summary: IconSummary,
   dashboard: IconDashboard,
   tasks: IconTask,
   speakers: IconSpeaker,

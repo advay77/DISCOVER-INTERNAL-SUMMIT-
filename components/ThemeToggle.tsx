@@ -31,7 +31,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
       title={dark ? 'Light theme' : 'Dark theme'}
       className={clsx(
-        'relative flex h-10 w-10 items-center justify-center rounded-full text-ink-muted transition hover:bg-paper hover:text-ink lg:h-11 lg:w-11 lg:bg-white lg:shadow-card',
+        'flex h-10 w-10 items-center justify-center rounded-full text-ink-muted transition hover:bg-paper hover:text-ink lg:h-11 lg:w-11 lg:bg-white lg:shadow-card',
         className,
       )}
     >

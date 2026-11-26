@@ -23,7 +23,6 @@ export default async function Dashboard({
   const seeSponsors = can(user, 'sponsors:view');
   const seeVendors = can(user, 'vendors:view');
   const seeAttendees = can(user, 'attendees:view');
-  const seeQuestions = can(user, 'questions:view');
 
   const [
     event,
@@ -44,10 +43,10 @@ export default async function Dashboard({
     vendorTotal,
     vendorSettled,
     attendeeCount,
-    openQuestions,
+    toChase,
     speakerRows,
     taskByStatus,
-    openQuestionCount,
+    toChaseCount,
   ] = await Promise.all([
     db.event.findFirst({ where: { isCurrent: true } }),
     db.task.count({ where: taskWhere }),
@@ -125,16 +124,17 @@ export default async function Dashboard({
       ? db.vendor.count({ where: { paymentStatus: { in: ['Paid', 'Deposit paid'] } } })
       : 0,
     seeAttendees ? db.attendee.count({ where: { status: 'Confirmed' } }) : 0,
-    seeQuestions
-      ? db.openQuestion.findMany({
-          where: { AND: [scopeFilter(user, 'questions:view'), { status: { not: 'Answered' } }] },
-          orderBy: { updatedAt: 'desc' },
+    seeSpeakers
+      ? db.speaker.findMany({
+          where: { status: { in: ['Invited', 'Responded'] } },
+          orderBy: [{ status: 'desc' }, { updatedAt: 'asc' }],
           take: 4,
           select: {
             id: true,
-            question: true,
+            name: true,
+            company: true,
             status: true,
-            update: true,
+            speakerType: true,
             owner: { select: { name: true, accent: true } },
           },
         })
@@ -143,11 +143,7 @@ export default async function Dashboard({
       ? db.speaker.findMany({ select: { status: true, confirmed: true, bio: true, headshot: true } })
       : [],
     db.task.groupBy({ by: ['status'], where: taskWhere, _count: { _all: true } }),
-    seeQuestions
-      ? db.openQuestion.count({
-          where: { AND: [scopeFilter(user, 'questions:view'), { status: { not: 'Answered' } }] },
-        })
-      : 0,
+    seeSpeakers ? db.speaker.count({ where: { status: { in: ['Invited', 'Responded'] } } }) : 0,
   ]);
 
   const countdown = event ? daysUntil(event.startDate) : 0;
@@ -408,44 +404,47 @@ export default async function Dashboard({
           </div>
         </section>
 
-        {/* Open questions */}
-        {seeQuestions ? (
+        {/* Speakers still to land */}
+        {seeSpeakers ? (
           <section className="card flex flex-col p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Open questions</h2>
-                <p className="mt-0.5 text-[13px] text-ink-muted">Blockers waiting on a decision</p>
+                <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Speakers to chase</h2>
+                <p className="mt-0.5 text-[13px] text-ink-muted">Invited or replied, not yet confirmed</p>
               </div>
-              {openQuestionCount > 0 && <Pill tone="lime" dot={false}>{openQuestionCount} open</Pill>}
+              {toChaseCount > 0 && <Pill tone="lime" dot={false}>{toChaseCount} waiting</Pill>}
             </div>
             <div className="mt-3 space-y-2.5">
-              {openQuestions.length === 0 ? (
-                <Empty title="Nothing blocked" />
+              {toChase.length === 0 ? (
+                <Empty title="Nobody waiting on a reply" />
               ) : (
-                openQuestions.map((q) => (
-                  <div key={q.id} className="subcard p-3">
+                toChase.map((sp) => (
+                  <div key={sp.id} className="subcard p-3">
                     <div className="flex items-start gap-3">
-                      <Avatar name={q.owner?.name ?? '?'} accent={q.owner?.accent ?? '#8F8F89'} size={36} />
+                      <Avatar name={sp.name} accent={sp.owner?.accent ?? '#8F8F89'} size={36} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13.5px] font-semibold text-ink">
-                          {q.question}
-                        </p>
+                        <p className="truncate text-[13.5px] font-semibold text-ink">{sp.name}</p>
                         <p className="truncate text-[12.5px] text-ink-muted">
-                          {q.update ? `“${q.update}”` : q.owner?.name ?? 'No owner yet'}
+                          {sp.company ?? sp.speakerType}
                         </p>
                       </div>
-                      <Link href="/questions" className="btn-ghost btn-sm shrink-0 border-transparent">
-                        Review
+                      <Link href={`/speakers/${sp.id}`} className="btn-ghost btn-sm shrink-0 border-transparent">
+                        Open
                       </Link>
                     </div>
                     <div className="mt-2.5 flex items-center justify-between gap-2 pl-[48px]">
-                      <StatusPill status={q.status} />
-                      <span className="truncate text-[11.5px] text-ink-faint">{q.owner?.name}</span>
+                      <StatusPill status={sp.status} />
+                      <span className="truncate text-[11.5px] text-ink-faint">
+                        {sp.owner ? `via ${sp.owner.name}` : sp.speakerType}
+                      </span>
                     </div>
                   </div>
                 ))
               )}
             </div>
+            <Link href="/speakers" className="mt-3 text-[13px] font-semibold text-ink hover:underline">
+              Full pipeline ›
+            </Link>
           </section>
         ) : (
           <MyTasksCard tasks={myTasks} />
@@ -453,7 +452,7 @@ export default async function Dashboard({
 
         {/* Right column: three compact lists */}
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-2 xl:col-span-1">
-          {seeQuestions && <MyTasksCard tasks={myTasks.slice(0, 3)} compact />}
+          {seeSpeakers && <MyTasksCard tasks={myTasks.slice(0, 3)} compact />}
 
           <MiniCard
             icon={<IconAgenda size={14} />}

@@ -1,39 +1,34 @@
+import clsx from 'clsx';
+
 /**
- * DISCOVER wordmark — a reconstruction of the mark on the reference boards
- * (arc above, wordmark, tagline). Swap in the official SVG here and it changes
- * everywhere in the product.
+ * The DISCOVER Supply Chain logo (public/discover-logo.png).
+ *
+ * The artwork has grey lettering that disappears on a dark background, so on
+ * dark surfaces — the login panel (`tone="light"`) and dark theme everywhere —
+ * it sits on a small white plate.
  */
 export function Logo({
-  tone = 'light',
+  tone = 'dark',
   size = 'md',
-  tagline = true,
 }: {
+  /** `light` = placed on a dark surface. */
   tone?: 'light' | 'dark';
   size?: 'sm' | 'md' | 'lg';
+  /** Kept for call-site compatibility; the artwork carries its own tagline. */
   tagline?: boolean;
 }) {
-  const word = size === 'lg' ? 'text-[32px]' : size === 'md' ? 'text-[20px]' : 'text-[16px]';
-  const color = tone === 'light' ? 'text-white' : 'text-navy';
-  const arcColor = tone === 'light' ? '#8FB4DC' : '#1F5FA8';
-  const tagColor = tone === 'light' ? 'text-white/45' : 'text-ink-faint';
-  const tagSize = size === 'lg' ? 'text-[10px]' : 'text-[8px]';
-
+  const height = size === 'lg' ? 'h-16' : size === 'md' ? 'h-[54px]' : 'h-9';
   return (
-    <div className="select-none leading-none">
-      <svg
-        viewBox="0 0 200 16"
-        className={size === 'lg' ? 'h-2.5 w-[188px]' : size === 'md' ? 'h-2 w-[124px]' : 'h-1.5 w-[98px]'}
-        fill="none"
-        aria-hidden
-      >
-        <path d="M2 14C42 2 158 2 198 14" stroke={arcColor} strokeWidth="3" strokeLinecap="round" />
-      </svg>
-      <div className={`${word} ${color} mt-1.5 font-bold tracking-[0.14em]`}>DISCOVER</div>
-      {tagline && (
-        <div className={`${tagSize} ${tagColor} mt-1.5 font-semibold uppercase tracking-[0.2em]`}>
-          Educate. Connect. Lead.
-        </div>
+    <span
+      className={clsx(
+        'inline-flex w-fit select-none items-center',
+        tone === 'light'
+          ? 'rounded-2xl bg-snow px-3.5 py-2'
+          : 'dark:rounded-xl dark:bg-snow dark:px-2.5 dark:py-1.5',
       )}
-    </div>
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/discover-logo.png" alt="DISCOVER Supply Chain" className={clsx(height, 'w-auto')} />
+    </span>
   );
 }

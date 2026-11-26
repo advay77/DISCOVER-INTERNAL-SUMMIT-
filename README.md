@@ -50,19 +50,19 @@ The fastest way to test the access model is to sign in as these four in turn:
 
 | Module | What it does |
 |---|---|
-| **Dashboard** | Countdown, progress, your tasks, deadlines, confirmation rings, open questions, recent chat — all scoped to your access |
+| **Dashboard** | Greeting, KPI strip, speaker/task pipeline, deadlines, speakers to chase, your tasks, upcoming events, recent chat — all scoped to your access |
+| **Summit summary** | The whole Annual Summit on one page: countdown, readiness, workstream progress, speakers, run of show, partners, registration, what needs attention |
 | **Tasks** | Kanban + list, seeded from the annual playbook, drag to change status, every task has its own thread |
 | **Speakers** | The 18-field outreach pipeline with the summary computed, bio/headshot readiness, contact behind a gate |
-| **Agenda** | Two-day run of show with session owners and moderators; volunteers see it read-only |
+| **Run of show** | Two-day timeline; add, edit and remove sessions (time, kind, room, owner, moderator, speakers) with `agenda:edit`; volunteers see it read-only |
 | **Sponsors** | Pipeline by tier, logo and contract tracking, values behind `finance:view` |
 | **Logistics** | Venue, room block, vendors, payment status; amounts behind `finance:view` |
 | **Attendees** | Registrations against the board's goals; emails and export behind their own gates |
-| **Open questions** | The blocker list, with owner and latest update |
 | **Communications** | Channels per workstream, DMs, object threads, @mentions, unread counts, photo/video/file attachments with drag-and-drop, voice notes, emoji reactions, and a voice huddle per channel |
 | **Files** | Folders, upload, permission-checked downloads, attachable to records |
 | **Team** | Member directory by workstream |
 | **Retro** | Plus / Delta / Consider — everyone can write, including volunteers |
-| **Admin** | Live permission matrix, people and roles, event settings, audit log |
+| **Admin** | Live permission matrix; add members and edit every detail (name, email, title, company, phone, colour, role, workstreams, active, password); rename roles and workstreams; event settings; audit log |
 
 ---
 

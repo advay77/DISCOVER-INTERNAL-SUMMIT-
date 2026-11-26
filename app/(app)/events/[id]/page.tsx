@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import { Card, Pill, Avatar, StatusPill, Empty, Bar } from '@/components/ui';
 import { Thread } from '@/components/Thread';
 import { longDate, clockTime, dueLabel, daysUntil, pct } from '@/lib/format';
-import { KIND_LABEL } from '@/lib/eventKinds';
+import { KIND_LABEL, KIND_TONE } from '@/lib/eventKinds';
 
 export default async function EventDetail({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -20,19 +20,13 @@ export default async function EventDetail({ params }: { params: Promise<{ id: st
   // A restricted workstream's event is closed to anyone outside the board.
   if (event.workstream?.restricted && scopeOf(user, 'finance:view') === 'none') notFound();
 
-  const [tasks, questions, attendees] = await Promise.all([
+  const [tasks, attendees] = await Promise.all([
     can(user, 'tasks:view')
       ? db.task.findMany({
           where: { AND: [scopeFilter(user, 'tasks:view'), { eventId: id }] },
           orderBy: [{ status: 'asc' }, { dueDate: 'asc' }],
           include: { owner: true },
           take: 100,
-        })
-      : [],
-    can(user, 'questions:view')
-      ? db.openQuestion.findMany({
-          where: { AND: [scopeFilter(user, 'questions:view'), { eventId: id }] },
-          include: { owner: true },
         })
       : [],
     can(user, 'attendees:view') ? db.attendee.count({ where: { eventId: id } }) : 0,
@@ -48,43 +42,53 @@ export default async function EventDetail({ params }: { params: Promise<{ id: st
         ← All events
       </Link>
 
-      {/* Header */}
-      <section className="rounded-card bg-navy-900 px-6 py-6 text-white lg:px-8">
-        <div className="flex flex-wrap items-start justify-between gap-6">
-          <div className="min-w-0">
-            <p className="text-2xs font-semibold uppercase tracking-label text-brass">
-              {KIND_LABEL[event.kind] ?? event.kind}
-              {event.workstream ? ` · ${event.workstream.name}` : ''}
-            </p>
-            <h1 className="display mt-2.5 text-[30px] leading-tight lg:text-[36px]">{event.name}</h1>
-            <p className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-white/60">
-              <span>{longDate(event.startDate)}</span>
-              {!isSummit && <span>{clockTime(event.startDate)}</span>}
-              {event.venue && <span>{event.venue}</span>}
-              {event.city && <span>{event.city}</span>}
-            </p>
-            {event.description && (
-              <p className="mt-4 max-w-2xl text-[13.5px] leading-relaxed text-white/70">
-                {event.description}
-              </p>
+      {/* Header: same language as the Summit summary hero. */}
+      <section className="card grid gap-5 p-5 sm:p-6 lg:grid-cols-[1fr_auto]">
+        <div className="min-w-0">
+          <p className="flex flex-wrap items-center gap-2 text-[12.5px] font-medium text-ink-faint">
+            <Pill tone={KIND_TONE[event.kind] ?? 'neutral'}>{KIND_LABEL[event.kind] ?? event.kind}</Pill>
+            {event.workstream && event.workstream.name !== (KIND_LABEL[event.kind] ?? event.kind) && (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full" style={{ background: event.workstream.color }} />
+                {event.workstream.name}
+              </span>
             )}
-          </div>
+          </p>
+          <h1 className="display mt-2.5 text-[28px] leading-tight text-ink lg:text-[36px]">{event.name}</h1>
+          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] text-ink-muted">
+            <span>{longDate(event.startDate)}</span>
+            {!isSummit && (
+              <>
+                <span className="text-ink-faint">·</span>
+                <span>{clockTime(event.startDate)}</span>
+              </>
+            )}
+            {event.venue && (
+              <>
+                <span className="text-ink-faint">·</span>
+                <span>{event.venue}</span>
+              </>
+            )}
+            {event.city && (
+              <>
+                <span className="text-ink-faint">·</span>
+                <span>{event.city}</span>
+              </>
+            )}
+          </p>
+          {event.description && (
+            <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-ink-muted">{event.description}</p>
+          )}
+        </div>
 
-          <div className="flex items-stretch gap-6 border-l border-white/12 pl-6">
-            <div>
-              <p className="display text-[34px] leading-none">
-                {away >= 0 ? away : Math.abs(away)}
-              </p>
-              <p className="mt-1.5 text-[10.5px] uppercase tracking-label text-white/40">
-                {away >= 0 ? 'days to go' : 'days since'}
-              </p>
-            </div>
-            {tasks.length > 0 && (
-              <div className="border-l border-white/12 pl-6">
-                <p className="display text-[34px] leading-none">{pct(done, tasks.length)}%</p>
-                <p className="mt-1.5 text-[10.5px] uppercase tracking-label text-white/40">tasks done</p>
-              </div>
-            )}
+        <div className="grid grid-cols-2 gap-3 lg:w-[320px]">
+          <div className="flex flex-col justify-between rounded-tile bg-lime p-4 text-lime-ink">
+            <p className="text-[12.5px] font-medium opacity-80">{away >= 0 ? 'Days to go' : 'Days since'}</p>
+            <p className="display mt-3 text-[40px] leading-none">{Math.abs(away)}</p>
+          </div>
+          <div className="flex flex-col justify-between rounded-tile bg-panel p-4">
+            <p className="text-[12.5px] font-medium text-ink-muted">Tasks done</p>
+            <p className="display mt-3 text-[40px] leading-none text-ink">{tasks.length ? `${pct(done, tasks.length)}%` : '—'}</p>
           </div>
         </div>
       </section>
@@ -204,7 +208,7 @@ export default async function EventDetail({ params }: { params: Promise<{ id: st
                     <Link
                       key={t.id}
                       href={`/tasks/${t.id}`}
-                      className="flex items-center gap-3 px-5 py-3 hover:bg-paper"
+                      className="flex items-center gap-3 px-5 py-3 hover:bg-panel/60"
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13.5px] font-medium text-ink">{t.title}</span>
@@ -220,19 +224,6 @@ export default async function EventDetail({ params }: { params: Promise<{ id: st
             )}
           </Card>
 
-          {questions.length > 0 && (
-            <Card title="Open questions" bodyClass="divide-y divide-line p-0">
-              {questions.map((q) => (
-                <div key={q.id} className="px-5 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-[13.5px] font-medium text-ink">{q.question}</p>
-                    <StatusPill status={q.status} />
-                  </div>
-                  {q.update && <p className="mt-1 text-[12px] text-ink-muted">{q.update}</p>}
-                </div>
-              ))}
-            </Card>
-          )}
         </div>
 
         {/* The conversation lives on the event */}

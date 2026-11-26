@@ -102,7 +102,7 @@ export function Topbar({
                   <Link
                     href="/admin"
                     onClick={() => setOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-paper"
+                    className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-panel/60"
                   >
                     <IconAdmin size={15} className="text-ink-faint" />
                     Admin &amp; access
@@ -111,7 +111,7 @@ export function Topbar({
                 <Link
                   href="/profile"
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-paper"
+                  className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-panel/60"
                 >
                   <IconTeam size={15} className="text-ink-faint" />
                   Your profile
@@ -119,7 +119,7 @@ export function Topbar({
                 <Link
                   href="/team"
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-paper"
+                  className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-panel/60"
                 >
                   <IconTeam size={15} className="text-ink-faint" />
                   Member directory
@@ -127,7 +127,7 @@ export function Topbar({
                 <Link
                   href="/chat"
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-paper"
+                  className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-panel/60"
                 >
                   <IconChat size={15} className="text-ink-faint" />
                   Messages

@@ -53,10 +53,6 @@ export const CAPABILITIES: CapabilityDef[] = [
   { key: 'attendees:contact', group: 'Attendees', label: 'See attendee emails', help: 'Personal data of registrants.', scopes: ['all', 'none'], sensitive: true },
   { key: 'attendees:export', group: 'Attendees', label: 'Export the attendee list', help: 'Download as CSV.', scopes: ['all', 'none'], sensitive: true },
 
-  // Questions
-  { key: 'questions:view', group: 'Open questions', label: 'See open questions', help: 'The blocker list.', scopes: ['all', 'workstream', 'none'] },
-  { key: 'questions:edit', group: 'Open questions', label: 'Edit open questions', help: 'Raise, update and close blockers.', scopes: ['all', 'workstream', 'none'] },
-
   // Files
   { key: 'files:view', group: 'Files', label: 'See files', help: 'The document library.', scopes: ['all', 'workstream', 'none'] },
   { key: 'files:upload', group: 'Files', label: 'Upload files', help: 'Add documents and images.', scopes: ['all', 'none'] },
@@ -77,9 +73,9 @@ export const CAPABILITIES: CapabilityDef[] = [
   { key: 'retro:write', group: 'Retro', label: 'Add retro notes', help: 'Everyone who was there should be able to.', scopes: ['all', 'none'] },
 
   // Admin
-  { key: 'admin:users', group: 'Admin', label: 'Manage people', help: 'Deactivate members. New accounts are not created here.', scopes: ['all', 'none'], sensitive: true },
+  { key: 'admin:users', group: 'Admin', label: 'Manage people', help: 'Add members, edit every detail, set passwords, deactivate.', scopes: ['all', 'none'], sensitive: true },
   { key: 'admin:roles', group: 'Admin', label: 'Assign roles', help: 'Move a member between roles.', scopes: ['all', 'none'], sensitive: true },
-  { key: 'admin:permissions', group: 'Admin', label: 'Edit the permission matrix', help: 'The master switch. President only, and cannot be revoked from the President.', scopes: ['all', 'none'], sensitive: true },
+  { key: 'admin:permissions', group: 'Admin', label: 'Edit the permission matrix', help: 'The master switch: permissions, role names and workstreams. President only, and cannot be revoked from the President.', scopes: ['all', 'none'], sensitive: true },
   { key: 'admin:event', group: 'Admin', label: 'Edit event settings', help: 'Dates, theme, venue, goals and the annual playbook.', scopes: ['all', 'none'] },
 ];
 
@@ -144,7 +140,6 @@ export const DEFAULT_MATRIX: Record<string, Record<string, Scope>> = {
     'vendors:view': 'all', 'vendors:edit': 'none',
     'finance:view': 'none', 'finance:edit': 'none',
     'attendees:view': 'all', 'attendees:contact': 'all', 'attendees:export': 'none',
-    'questions:view': 'all', 'questions:edit': 'workstream',
     'files:view': 'all', 'files:upload': 'all', 'files:delete': 'none',
     'chat:use': 'all', 'chat:dm': 'all', 'chat:channel.create': 'all', 'chat:announce': 'workstream',
     'team:view': 'all', 'team:contact': 'all',
