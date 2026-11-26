@@ -37,7 +37,7 @@ export function ChannelSwitcher({
     <div className="lg:hidden">
       <button
         onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-2 rounded-[5px] border border-line-strong bg-white px-3 py-2 text-left"
+        className="flex w-full items-center gap-2 rounded-xl border border-line-strong bg-white px-3 py-2 text-left"
       >
         {currentType === 'private' ? (
           <IconLock size={14} className="shrink-0 text-ink-faint" />
@@ -46,7 +46,7 @@ export function ChannelSwitcher({
         )}
         <span className="flex-1 truncate text-[13.5px] font-semibold text-ink">{currentName}</span>
         {totalUnread > 0 && (
-          <span className="rounded-[3px] bg-brick px-1.5 text-[10px] font-bold text-white">
+          <span className="rounded-md bg-brick px-1.5 text-[10px] font-bold text-snow">
             {totalUnread}
           </span>
         )}
@@ -55,7 +55,7 @@ export function ChannelSwitcher({
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-end bg-navy/35 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4">
-          <div className="max-h-[80vh] w-full overflow-y-auto rounded-t-[10px] border border-line bg-white sm:max-w-sm sm:rounded-[6px]">
+          <div className="max-h-[80vh] w-full overflow-y-auto rounded-t-[10px] border border-line bg-white sm:max-w-sm sm:rounded-2xl">
             <div className="sticky top-0 flex items-center justify-between border-b border-line bg-white px-4 py-3">
               <p className="text-[14px] font-semibold text-ink">Conversations</p>
               <button onClick={() => setOpen(false)} className="text-ink-faint hover:text-ink">
@@ -81,7 +81,7 @@ export function ChannelSwitcher({
                             router.push(`/chat/${c.key}`);
                           }}
                           className={clsx(
-                            'flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-[13.5px]',
+                            'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13.5px]',
                             active
                               ? 'bg-navy font-semibold text-white'
                               : c.unread > 0
@@ -92,7 +92,7 @@ export function ChannelSwitcher({
                           <Icon size={13} className="opacity-60" />
                           <span className="flex-1 truncate">{c.name}</span>
                           {c.unread > 0 && !active && (
-                            <span className="rounded-[3px] bg-brick px-1.5 text-[10px] font-bold text-white">
+                            <span className="rounded-md bg-brick px-1.5 text-[10px] font-bold text-snow">
                               {c.unread}
                             </span>
                           )}

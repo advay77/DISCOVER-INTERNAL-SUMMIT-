@@ -4,7 +4,7 @@ import { countUnread } from '@/lib/unread';
 import { Sidebar, type NavEntry } from '@/components/Sidebar';
 import { MobileTabBar } from '@/components/MobileTabBar';
 import { Topbar } from '@/components/Topbar';
-import { dateRange } from '@/lib/format';
+import { dateRange, daysUntil } from '@/lib/format';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -12,12 +12,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Open task count, scoped exactly the way the Tasks page scopes it.
   const taskWhere: any = scopeFilter(user, 'tasks:view');
 
-  const [event, openTasks, unread, notices] = await Promise.all([
+  const now = new Date();
+  const [event, openTasks, overdue, unread, notices] = await Promise.all([
     db.event.findFirst({
       where: { isCurrent: true },
       select: { name: true, startDate: true, endDate: true, city: true },
     }),
     db.task.count({ where: { ...taskWhere, status: { not: 'done' } } }),
+    db.task.count({ where: { AND: [taskWhere, { status: { not: 'done' }, dueDate: { lt: now } }] } }),
     countUnread(user.id),
     db.notification.count({ where: { userId: user.id, readAt: null } }),
   ]);
@@ -67,6 +69,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         eventTagline={
           event ? `${dateRange(event.startDate, event.endDate)} · ${event.city ?? ''}` : 'Create one in Admin'
         }
+        daysToGo={event ? daysUntil(event.startDate) : null}
+        overdue={can(user, 'tasks:view') ? overdue : 0}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
@@ -84,7 +88,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           nav={nav}
         />
         {/* Bottom padding keeps the last row clear of the phone tab bar. */}
-        <main className="flex-1 px-3.5 pb-[calc(env(safe-area-inset-bottom)+84px)] pt-4 sm:px-5 lg:px-6 lg:pb-8 lg:pt-6">
+        <main className="flex-1 px-3.5 pb-[calc(env(safe-area-inset-bottom)+84px)] pt-4 sm:px-5 lg:px-6 lg:pb-8 lg:pt-2">
           {children}
         </main>
         <MobileTabBar nav={nav} />

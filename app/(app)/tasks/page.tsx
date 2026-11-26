@@ -113,7 +113,7 @@ export default async function TasksPage({
             href={`/tasks?ws=${w.id}`}
             className={
               ws === w.id
-                ? 'rounded-lg px-3 py-1.5 text-[13px] font-semibold text-white'
+                ? 'rounded-lg px-3 py-1.5 text-[13px] font-semibold text-snow'
                 : 'rounded-lg border border-line bg-white px-3 py-1.5 text-[13px] font-medium text-ink-muted hover:text-ink'
             }
             style={ws === w.id ? { background: w.color } : undefined}

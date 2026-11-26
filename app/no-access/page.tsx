@@ -15,7 +15,7 @@ export default async function NoAccess({
   return (
     <main className="flex min-h-screen items-center justify-center bg-paper px-6">
       <div className="card max-w-md p-8 text-center">
-        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-[5px] border border-brass/30 bg-brass-100 text-brass">
+        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl border border-brass/30 bg-brass-100 text-brass">
           <IconLock size={20} />
         </div>
         <h1 className="mt-4 text-xl font-bold text-ink">That part is not open to you</h1>

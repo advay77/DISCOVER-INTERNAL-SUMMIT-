@@ -1,12 +1,18 @@
 import Link from 'next/link';
 import { requireUser, can, scopeOf, scopeFilter } from '@/lib/authz';
 import { db } from '@/lib/db';
-import { Card, Pill, Ring, StatTile, Avatar, StatusPill, Empty } from '@/components/ui';
-import { IconAlert, IconClock, IconCheck, IconAttendees, IconTask } from '@/components/icons';
+import clsx from 'clsx';
+import { Pill, StatTile, Avatar, StatusPill, Empty } from '@/components/ui';
+import { IconTask, IconAgenda, IconChat, IconArrow } from '@/components/icons';
 import { dateRange, daysUntil, dueLabel, pct, relativeTime, shortDate } from '@/lib/format';
 
-export default async function Dashboard() {
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ pipeline?: string }>;
+}) {
   const user = await requireUser();
+  const { pipeline: pipelineParam } = await searchParams;
 
   const scope = scopeOf(user, 'tasks:view');
   const taskWhere: any = scopeFilter(user, 'tasks:view');
@@ -39,6 +45,9 @@ export default async function Dashboard() {
     vendorSettled,
     attendeeCount,
     openQuestions,
+    speakerRows,
+    taskByStatus,
+    openQuestionCount,
   ] = await Promise.all([
     db.event.findFirst({ where: { isCurrent: true } }),
     db.task.count({ where: taskWhere }),
@@ -126,334 +135,451 @@ export default async function Dashboard() {
             question: true,
             status: true,
             update: true,
-            owner: { select: { name: true } },
+            owner: { select: { name: true, accent: true } },
           },
         })
       : [],
+    seeSpeakers
+      ? db.speaker.findMany({ select: { status: true, confirmed: true, bio: true, headshot: true } })
+      : [],
+    db.task.groupBy({ by: ['status'], where: taskWhere, _count: { _all: true } }),
+    seeQuestions
+      ? db.openQuestion.count({
+          where: { AND: [scopeFilter(user, 'questions:view'), { status: { not: 'Answered' } }] },
+        })
+      : 0,
   ]);
 
   const countdown = event ? daysUntil(event.startDate) : 0;
   const progress = pct(done, total);
   const first = user.name.split(' ')[0];
 
-  return (
-    <div className="mx-auto max-w-[1340px] space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-[18px] font-semibold tracking-tight text-ink">{first}</h1>
-          <p className="text-[13px] text-ink-muted">Your desk for this cycle.</p>
-        </div>
-        {overdue > 0 && (
-          <Link
-            href="/tasks?filter=overdue"
-            className="inline-flex items-center gap-2 rounded-[5px] border border-brick/25 bg-brick/10 px-3 py-1.5 text-[13px] font-semibold text-brick hover:bg-brick/15"
-          >
-            {overdue} overdue
-            <span aria-hidden>→</span>
-          </Link>
-        )}
-      </div>
+  // Greeting in the summit's own time zone.
+  const hour = Number(
+    new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/New_York' }).format(now),
+  );
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-      {/* Hero — a masthead, not a gradient card */}
-      <section className="rounded-card bg-navy-900 px-4 py-5 text-white sm:px-6 sm:py-6 lg:px-8 lg:py-7">
-        <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
-          <div className="min-w-0">
-            <p className="text-2xs font-semibold uppercase tracking-label text-brass">
-              {event?.theme ?? 'Current cycle'}
-            </p>
-            <p className="display mt-2 text-[26px] leading-[1.05] sm:mt-2 sm:text-[34px] lg:text-[40px]">
-              {event?.name ?? 'No active cycle'}
-            </p>
+  // ---------------------------------------------------------------- pipeline
+  type Stage = { label: string; value: number; unit: string; pct: number };
+  const showSpeakers = seeSpeakers && pipelineParam !== 'tasks';
+  let stages: Stage[];
+  if (showSpeakers) {
+    const live = speakerRows.filter((s) => s.status !== 'Declined');
+    const invited = live.filter((s) => ['Invited', 'Responded', 'Confirmed'].includes(s.status)).length;
+    const responded = live.filter((s) => ['Responded', 'Confirmed'].includes(s.status)).length;
+    const confirmed = speakerRows.filter((s) => s.confirmed).length;
+    const ready = speakerRows.filter((s) => s.confirmed && s.bio && s.headshot).length;
+    const base = Math.max(1, speakerRows.length);
+    stages = [
+      { label: 'Identified', value: speakerRows.length, unit: 'speakers', pct: 100 },
+      { label: 'Invited', value: invited, unit: 'speakers', pct: pct(invited, base) },
+      { label: 'Responded', value: responded, unit: 'speakers', pct: pct(responded, base) },
+      { label: 'Confirmed', value: confirmed, unit: 'speakers', pct: pct(confirmed, base) },
+      { label: 'Bio & headshot', value: ready, unit: 'ready', pct: pct(ready, base) },
+    ];
+  } else {
+    const by = (k: string) => taskByStatus.find((t) => t.status === k)?._count._all ?? 0;
+    const base = Math.max(1, total);
+    stages = [
+      { label: 'To do', value: by('todo'), unit: 'tasks', pct: pct(by('todo'), base) },
+      { label: 'In progress', value: by('in_progress'), unit: 'tasks', pct: pct(by('in_progress'), base) },
+      { label: 'Review', value: by('review'), unit: 'tasks', pct: pct(by('review'), base) },
+      { label: 'Done', value: by('done'), unit: 'tasks', pct: pct(by('done'), base) },
+    ];
+  }
+  const maxStage = Math.max(1, ...stages.map((s) => s.value));
+
+  // ---------------------------------------------------------------- counters
+  const tiles: React.ReactNode[] = [
+    <StatTile key="o" value={overdue} label="Overdue" tone="bad" hint={overdue ? 'tasks' : 'clear'} href="/tasks?filter=overdue" />,
+    <StatTile key="w" value={dueWeek} label="Due this week" tone="warn" hint="7 days" href="/tasks?filter=week" />,
+    <StatTile key="d" value={done} label="Completed" tone="ok" hint={`of ${total}`} href="/tasks?filter=done" />,
+    <StatTile key="m" value={mineOpen} label="On your plate" tone="navy" hint="open" href="/tasks?filter=mine" />,
+  ];
+  if (seeSpeakers)
+    tiles.push(
+      <StatTile key="s" value={speakerConfirmed} label="Speakers" tone="ok" hint={`of ${speakerTotal}`} href="/speakers" />,
+    );
+  if (seeSponsors)
+    tiles.push(
+      <StatTile key="sp" value={sponsorConfirmed} label="Sponsors" tone="brand" hint={`of ${sponsorTotal}`} href="/sponsors" />,
+    );
+  if (seeAttendees)
+    tiles.push(<StatTile key="a" value={attendeeCount} label="Registered" tone="navy" hint="attendees" href="/attendees" />);
+  if (seeVendors && !seeAttendees)
+    tiles.push(
+      <StatTile key="v" value={vendorSettled} label="Vendors settled" tone="navy" hint={`of ${vendorTotal}`} href="/logistics" />,
+    );
+  tiles.push(
+    <StatTile
+      key="c"
+      value={countdown >= 0 ? countdown : Math.abs(countdown)}
+      label={countdown >= 0 ? 'Days to go' : 'Days since summit'}
+      hint={`${progress}%`}
+      highlight
+    />,
+  );
+
+  const linkCls = 'inline-flex min-h-[40px] items-center gap-1 text-[13px] font-semibold text-ink hover:underline lg:min-h-0';
+
+  return (
+    <div className="mx-auto max-w-[1440px] space-y-4">
+      {/* Greeting */}
+      <div className="flex flex-wrap items-end justify-between gap-3 pb-1">
+        <div className="min-w-0">
+          <h1 className="display text-[28px] leading-tight text-ink sm:text-[36px]">
+            {greeting}, {first}
+          </h1>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] text-ink-muted">
+            <span className="font-medium text-ink">{event?.name ?? 'No active cycle'}</span>
             {event && (
-              <p className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-white/55 sm:mt-4 sm:gap-x-6 sm:text-[13px]">
+              <>
+                <span className="text-ink-faint">·</span>
                 <span>{dateRange(event.startDate, event.endDate)}</span>
-                <span className="hidden h-3 w-px bg-white/20 sm:block" />
+                <span className="text-ink-faint">·</span>
                 <span>{event.city}</span>
-                <span className="hidden h-3 w-px bg-white/20 sm:block" />
-                <span className="hidden sm:inline">
-                  Day 1 {event.dayOneTheme} · Day 2 {event.dayTwoTheme}
-                </span>
-              </p>
+              </>
             )}
             {event?.venue === 'To be confirmed' && (
-              <p className="mt-3 inline-flex items-center gap-2 border-l-2 border-brass bg-white/[0.06] py-1.5 pl-3 pr-4 text-[12px] text-white/80 sm:mt-4 sm:text-[12.5px]">
-                <span className="sm:hidden">Dates and venue not confirmed yet.</span>
-                <span className="hidden sm:inline">Dates and venue are not confirmed. Set them in Admin → Event.</span>
-              </p>
+              <Link href="/admin" className="ml-1">
+                <Pill tone="warn">Dates &amp; venue not confirmed</Pill>
+              </Link>
             )}
-          </div>
+          </p>
+        </div>
+        <Link href="/tasks" className="btn-primary py-2.5 pl-3 pr-5">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15">
+            <IconArrow size={13} />
+          </span>
+          Open task board
+        </Link>
+      </div>
 
-          {/* Countdown as one typographic line */}
-          <div className="flex w-full items-stretch gap-6 border-t border-white/12 pt-4 sm:w-auto sm:gap-8 sm:border-l sm:border-t-0 sm:pl-8 sm:pt-0">
-            <div>
-              <p className="display text-[32px] leading-none sm:text-[46px]">
-                {countdown >= 0 ? countdown : Math.abs(countdown)}
-              </p>
-              <p className="mt-2 text-[11px] uppercase tracking-label text-white/40">
-                {countdown >= 0 ? 'Days to go' : 'Days since'}
-              </p>
-            </div>
-            <div className="border-l border-white/12 pl-6 sm:pl-8">
-              <p className="display text-[32px] leading-none sm:text-[46px]">{progress}%</p>
-              <p className="mt-2 text-[11px] uppercase tracking-label text-white/40">
-                {scope === 'own' ? 'Your tasks done' : 'Cycle complete'}
-              </p>
-              <div className="mt-3 w-28 bg-white/15 sm:w-36">
-                <div className="h-[3px] bg-brass" style={{ width: `${progress}%` }} />
-              </div>
-            </div>
+      {/* Counters */}
+      <div
+        className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:[grid-template-columns:repeat(var(--n),minmax(0,1fr))]"
+        style={{ ['--n' as string]: tiles.length }}
+      >
+        {tiles}
+      </div>
+
+      {/* Pipeline */}
+      <section className="card p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">
+              {showSpeakers ? 'Speaker pipeline' : 'Task pipeline'}
+            </h2>
+            <p className="mt-0.5 text-[13px] text-ink-muted">
+              {showSpeakers
+                ? 'From first name on the list to bio and headshot in hand'
+                : scope === 'own'
+                  ? 'Your tasks, by status'
+                  : 'Every task this cycle, by status'}
+            </p>
           </div>
+          <div className="flex items-center gap-1 rounded-full bg-panel p-1">
+            {seeSpeakers && (
+              <Link
+                href="/dashboard"
+                className={clsx(
+                  'rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition',
+                  showSpeakers ? 'bg-navy text-white' : 'text-ink-muted hover:text-ink',
+                )}
+              >
+                Speakers
+              </Link>
+            )}
+            <Link
+              href="/dashboard?pipeline=tasks"
+              className={clsx(
+                'rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition',
+                !showSpeakers ? 'bg-navy text-white' : 'text-ink-muted hover:text-ink',
+              )}
+            >
+              Tasks
+            </Link>
+            <Link
+              href={showSpeakers ? '/speakers' : '/tasks'}
+              className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted hover:text-ink"
+              aria-label="Open the full list"
+            >
+              ···
+            </Link>
+          </div>
+        </div>
+
+        <div
+          className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:[grid-template-columns:repeat(var(--n),minmax(0,1fr))]"
+          style={{ ['--n' as string]: stages.length }}
+        >
+          {stages.map((st, i) => {
+            const last = i === stages.length - 1;
+            const h = Math.max(8, Math.round((st.value / maxStage) * 100));
+            return (
+              <div key={st.label} className="subcard flex flex-col p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className={clsx(
+                      'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium',
+                      i === 0 ? 'bg-lime text-lime-ink' : last ? 'bg-navy text-white' : 'bg-white text-ink',
+                    )}
+                  >
+                    {!(i === 0 || last) && <span className="h-1.5 w-1.5 rounded-full bg-ink-faint" />}
+                    {st.label}
+                  </span>
+                  <span className="text-[12px] font-medium text-ink-muted">{st.pct}%</span>
+                </div>
+                <div className="mt-3 flex h-[96px] items-end">
+                  <div
+                    className={clsx('w-full rounded-xl', last ? 'bg-lime' : 'border border-line-strong')}
+                    style={{
+                      height: last ? 18 : `${h}%`,
+                      ...(last
+                        ? {}
+                        : {
+                            backgroundImage:
+                              'repeating-linear-gradient(135deg, rgb(var(--line-strong)) 0 1px, transparent 1px 7px)',
+                          }),
+                    }}
+                  />
+                </div>
+                <div className="mt-3 flex items-baseline gap-1.5">
+                  <span className="display text-[38px] leading-none text-ink">{st.value}</span>
+                  <span className="text-[12.5px] text-ink-muted">{st.unit}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      {/* Counters */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatTile value={overdue} label="Overdue" tone="bad" icon={<IconAlert size={17} />} href="/tasks?filter=overdue" />
-        <StatTile value={dueWeek} label="Due this week" tone="warn" icon={<IconClock size={17} />} href="/tasks?filter=week" />
-        <StatTile value={done} label="Completed" tone="ok" icon={<IconCheck size={17} />} href="/tasks?filter=done" />
-        {can(user, 'attendees:view') ? (
-          <StatTile value={attendeeCount} label="Registered" tone="navy" icon={<IconAttendees size={17} />} href="/attendees" />
-        ) : (
-          <StatTile value={mineOpen} label="On your plate" tone="navy" icon={<IconTask size={17} />} href="/tasks?filter=mine" />
-        )}
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
-        {/* My tasks */}
-        <Card
-          title={scope === 'own' ? 'Your tasks' : 'On your plate'}
-          action={
-            <Link href="/tasks?filter=mine" className="inline-flex min-h-[40px] items-center text-[13px] font-semibold text-brand hover:underline lg:min-h-0">
-              View all →
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[repeat(2,minmax(0,1fr))] xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)]">
+        {/* Next deadlines */}
+        <section className="card flex flex-col p-4 sm:p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Next deadlines</h2>
+            <Link href="/tasks" className={linkCls}>
+              All tasks <span aria-hidden>›</span>
             </Link>
-          }
-          bodyClass="divide-y divide-line"
-        >
-          {myTasks.length === 0 ? (
-            <div className="p-5">
-              <Empty title="Nothing assigned to you right now" hint="When someone assigns you a task it appears here first." />
-            </div>
-          ) : (
-            myTasks.map((t) => {
-              const due = dueLabel(t.dueDate);
-              return (
-                <Link
-                  key={t.id}
-                  href={`/tasks/${t.id}`}
-                  className="flex items-center gap-3 px-5 py-3 transition hover:bg-paper"
-                >
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: t.workstream?.color ?? '#94A3B8' }} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-ink">{t.title}</span>
-                    <span className="text-[12px] text-ink-faint">{t.category}</span>
-                  </span>
-                  <span className="hidden sm:inline-flex">
-                    <StatusPill status={t.status} />
-                  </span>
-                  <Pill tone={due.tone}>{due.text}</Pill>
-                </Link>
-              );
-            })
-          )}
-        </Card>
-
-        {/* Upcoming deadlines */}
-        <Card
-          title="Next deadlines"
-          action={
-            <Link href="/tasks" className="inline-flex min-h-[40px] items-center text-[13px] font-semibold text-brand hover:underline lg:min-h-0">
-              All tasks →
-            </Link>
-          }
-          bodyClass="divide-y divide-line"
-        >
-          {upcoming.length === 0 ? (
-            <div className="p-5">
+          </div>
+          <div className="mt-3 flex-1 divide-y divide-line">
+            {upcoming.length === 0 ? (
               <Empty title="No deadlines in view" />
-            </div>
-          ) : (
-            upcoming.map((t) => {
-              const due = dueLabel(t.dueDate);
-              return (
-                <Link key={t.id} href={`/tasks/${t.id}`} className="flex items-center gap-3 px-5 py-3 transition hover:bg-paper">
-                  <div className="w-11 shrink-0 text-center">
-                    <div className="text-[10px] font-bold uppercase text-ink-faint">
-                      {shortDate(t.dueDate).split(' ')[0]}
-                    </div>
-                    <div className="text-[17px] font-bold leading-none text-ink">
-                      {shortDate(t.dueDate).split(' ')[1]}
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13.5px] font-medium text-ink">{t.title}</p>
-                    {t.owner && <p className="text-[12px] text-ink-faint">{t.owner.name}</p>}
-                  </div>
-                  <Pill tone={due.tone}>{due.text}</Pill>
-                </Link>
-              );
-            })
-          )}
-        </Card>
-      </div>
-
-      <Card title="Where the cycle stands">
-        <div className="flex flex-wrap items-start justify-around gap-x-8 gap-y-6 sm:justify-start sm:gap-x-14">
-          {can(user, 'speakers:view') && (
-            <Ring
-              value={pct(speakerConfirmed, speakerTotal)}
-              label="Speakers"
-              sub={`${speakerConfirmed} / ${speakerTotal} confirmed`}
-              tone="#17A34A"
-            />
-          )}
-          {can(user, 'sponsors:view') && (
-            <Ring
-              value={pct(sponsorConfirmed, sponsorTotal)}
-              label="Sponsors"
-              sub={`${sponsorConfirmed} / ${sponsorTotal} confirmed`}
-              tone="#1D6FE0"
-            />
-          )}
-          {can(user, 'vendors:view') && (
-            <Ring
-              value={pct(vendorSettled, vendorTotal)}
-              label="Logistics"
-              sub={`${vendorSettled} / ${vendorTotal} settled`}
-              tone="#D97708"
-            />
-          )}
-          {!can(user, 'speakers:view') && !can(user, 'sponsors:view') && (
-            <Ring value={progress} label="Your tasks" sub={`${done} of ${total} done`} />
-          )}
-        </div>
-      </Card>
-
-      <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-        {can(user, 'questions:view') && (
-          <Card
-            title="Open questions"
-            action={
-              <Link href="/questions" className="inline-flex min-h-[40px] items-center text-[13px] font-semibold text-brand hover:underline lg:min-h-0">
-                All →
-              </Link>
-            }
-            bodyClass="divide-y divide-line"
-          >
-            {openQuestions.length === 0 ? (
-              <div className="p-5">
-                <Empty title="Nothing blocked" />
-              </div>
             ) : (
-              openQuestions.map((q) => (
-                <Link key={q.id} href="/questions" className="block px-5 py-3 transition hover:bg-paper">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="line-clamp-2 text-[13.5px] font-medium text-ink">{q.question}</p>
-                    <StatusPill status={q.status} />
+              upcoming.map((t) => {
+                const due = dueLabel(t.dueDate);
+                const [mon, day] = shortDate(t.dueDate).split(' ');
+                return (
+                  <Link key={t.id} href={`/tasks/${t.id}`} className="flex items-center gap-3 py-3 transition hover:opacity-80">
+                    <span className="w-12 shrink-0">
+                      <span className="block text-[17px] font-semibold leading-none text-ink">{day}</span>
+                      <span className="mt-0.5 block text-[11px] font-medium uppercase text-ink-faint">{mon}</span>
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-semibold text-ink">{t.title}</span>
+                      {t.owner && <span className="block truncate text-[12px] text-ink-faint">{t.owner.name}</span>}
+                    </span>
+                    <Pill tone={due.tone}>{due.text}</Pill>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+          <div className="subcard mt-3 px-3.5 py-3">
+            <p className="text-[12px] font-medium text-ink-muted">Quick views</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[
+                ['Mine', '/tasks?filter=mine'],
+                ['Overdue', '/tasks?filter=overdue'],
+                ['This week', '/tasks?filter=week'],
+                ['Done', '/tasks?filter=done'],
+              ].map(([label, href]) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="rounded-full border border-dashed border-line-strong bg-white/60 px-3 py-1 text-[12px] font-medium text-ink-muted hover:border-ink/40 hover:text-ink"
+                >
+                  + {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Open questions */}
+        {seeQuestions ? (
+          <section className="card flex flex-col p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Open questions</h2>
+                <p className="mt-0.5 text-[13px] text-ink-muted">Blockers waiting on a decision</p>
+              </div>
+              {openQuestionCount > 0 && <Pill tone="lime" dot={false}>{openQuestionCount} open</Pill>}
+            </div>
+            <div className="mt-3 space-y-2.5">
+              {openQuestions.length === 0 ? (
+                <Empty title="Nothing blocked" />
+              ) : (
+                openQuestions.map((q) => (
+                  <div key={q.id} className="subcard p-3">
+                    <div className="flex items-start gap-3">
+                      <Avatar name={q.owner?.name ?? '?'} accent={q.owner?.accent ?? '#8F8F89'} size={36} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13.5px] font-semibold text-ink">
+                          {q.question}
+                        </p>
+                        <p className="truncate text-[12.5px] text-ink-muted">
+                          {q.update ? `“${q.update}”` : q.owner?.name ?? 'No owner yet'}
+                        </p>
+                      </div>
+                      <Link href="/questions" className="btn-ghost btn-sm shrink-0 border-transparent">
+                        Review
+                      </Link>
+                    </div>
+                    <div className="mt-2.5 flex items-center justify-between gap-2 pl-[48px]">
+                      <StatusPill status={q.status} />
+                      <span className="truncate text-[11.5px] text-ink-faint">{q.owner?.name}</span>
+                    </div>
                   </div>
-                  {q.update && <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-ink-muted">{q.update}</p>}
-                  {q.owner && <p className="mt-1 text-[11px] text-ink-faint">{q.owner.name}</p>}
+                ))
+              )}
+            </div>
+          </section>
+        ) : (
+          <MyTasksCard tasks={myTasks} />
+        )}
+
+        {/* Right column: three compact lists */}
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-2 xl:col-span-1">
+          {seeQuestions && <MyTasksCard tasks={myTasks.slice(0, 3)} compact />}
+
+          <MiniCard
+            icon={<IconAgenda size={14} />}
+            title="Coming up"
+            count={upcomingEvents.length}
+            href="/events"
+          >
+            {upcomingEvents.length === 0 ? (
+              <p className="text-[12.5px] text-ink-faint">Nothing scheduled.</p>
+            ) : (
+              upcomingEvents.slice(0, 3).map((e) => (
+                <Link key={e.id} href={`/events/${e.id}`} className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="truncate text-[13px] font-medium text-ink">{e.name}</span>
+                  <span className="shrink-0 text-[12px] text-ink-faint">{shortDate(e.startDate)}</span>
                 </Link>
               ))
             )}
-          </Card>
-        )}
+          </MiniCard>
 
-        <Card
-          title="What is coming up"
-          action={
-            <Link href="/events" className="inline-flex min-h-[40px] items-center text-[13px] font-semibold text-brand hover:underline lg:min-h-0">
-              All events →
-            </Link>
-          }
-          bodyClass="divide-y divide-line p-0"
-        >
-          {upcomingEvents.length === 0 ? (
-            <div className="p-5">
-              <Empty title="Nothing scheduled" />
-            </div>
-          ) : (
-            upcomingEvents.map((e) => (
-              <Link
-                key={e.id}
-                href={`/events/${e.id}`}
-                className="flex items-center gap-3 px-5 py-3 hover:bg-paper"
-              >
-                <span className="w-11 shrink-0 text-center">
-                  <span className="block text-[10px] font-bold uppercase text-ink-faint">
-                    {shortDate(e.startDate).split(' ')[0]}
+          <MiniCard
+            icon={<IconChat size={14} />}
+            title="Recent messages"
+            count={recentMessages.length}
+            href="/chat"
+          >
+            {recentMessages.length === 0 && activity.length === 0 ? (
+              <p className="text-[12.5px] text-ink-faint">Quiet for now — new channel messages show up here.</p>
+            ) : recentMessages.length > 0 ? (
+              recentMessages.slice(0, 3).map((m) => (
+                <Link key={m.id} href={`/chat/${m.channel?.key}`} className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="min-w-0 truncate text-[13px] text-ink">
+                    <span className="font-medium">{m.author.name}</span>
+                    <span className="text-ink-muted"> · {m.body}</span>
                   </span>
-                  <span className="block text-[17px] font-bold leading-none text-ink">
-                    {shortDate(e.startDate).split(' ')[1]}
-                  </span>
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13.5px] font-medium text-ink">{e.name}</span>
-                  <span className="block truncate text-[11.5px] text-ink-faint">
-                    {e.workstream?.name ?? ''}
-                    {e.venue ? ` · ${e.venue}` : ''}
-                  </span>
-                </span>
-                <Pill tone={e.kind === 'summit' ? 'brand' : 'neutral'}>
-                  {e.kind === 'summit' ? 'Summit' : e.kind}
-                </Pill>
-              </Link>
-            ))
-          )}
-        </Card>
-
-        <Card
-          title="Recent communications"
-          action={
-            <Link href="/chat" className="inline-flex min-h-[40px] items-center text-[13px] font-semibold text-brand hover:underline lg:min-h-0">
-              Open chat →
-            </Link>
-          }
-          bodyClass="divide-y divide-line"
-        >
-          {recentMessages.length === 0 && activity.length === 0 ? (
-            <div className="p-5">
-              <Empty title="Quiet for now" hint="New channel messages and updates show up here." />
-            </div>
-          ) : (
-            <>
-              {recentMessages.length === 0 && (
-                <p className="px-5 py-3 text-[12.5px] text-ink-faint">No channel messages yet.</p>
-              )}
-              {recentMessages.map((m) => (
-                <Link
-                  key={m.id}
-                  href={`/chat/${m.channel?.key}`}
-                  className="flex items-start gap-3 px-5 py-3 hover:bg-paper"
-                >
-                  <Avatar name={m.author.name} accent={m.author.accent} size={30} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="truncate text-[13px] font-semibold text-ink">{m.author.name}</p>
-                      <span className="shrink-0 text-[11px] text-ink-faint">{relativeTime(m.createdAt)}</span>
-                    </div>
-                    <p className="truncate text-[12.5px] text-ink-muted">{m.body}</p>
-                    <p className="text-[11px] text-ink-faint">#{m.channel?.name}</p>
-                  </div>
+                  <span className="shrink-0 text-[12px] text-ink-faint">{relativeTime(m.createdAt)}</span>
                 </Link>
-              ))}
-              {activity.slice(0, 2).length > 0 && (
-                <p className="bg-paper px-5 py-1.5 text-[10px] font-semibold uppercase tracking-label text-ink-faint">
-                  Updates
-                </p>
-              )}
-              {activity.slice(0, 2).map((a) => (
-                <div key={a.id} className="flex items-center gap-3 px-5 py-2.5">
-                  <span className="text-[11px] text-ink-faint">●</span>
-                  <p className="min-w-0 flex-1 truncate text-[12.5px] text-ink-muted">
-                    <strong className="font-semibold text-ink">{a.actor?.name}</strong> {a.summary}
-                  </p>
-                  <span className="shrink-0 text-[11px] text-ink-faint">{relativeTime(a.createdAt)}</span>
+              ))
+            ) : (
+              activity.slice(0, 3).map((a) => (
+                <div key={a.id} className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="min-w-0 truncate text-[13px] text-ink-muted">
+                    <span className="font-medium text-ink">{a.actor?.name}</span> {a.summary}
+                  </span>
+                  <span className="shrink-0 text-[12px] text-ink-faint">{relativeTime(a.createdAt)}</span>
                 </div>
-              ))}
-            </>
-          )}
-        </Card>
+              ))
+            )}
+          </MiniCard>
+        </div>
       </div>
     </div>
+  );
+}
+
+function MiniCard({
+  icon,
+  title,
+  count,
+  href,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  count: number;
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="card p-4">
+      <Link href={href} className="flex items-center gap-2.5">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-panel text-ink">{icon}</span>
+        <span className="flex-1 text-[14.5px] font-semibold text-ink">{title}</span>
+        <span className="text-[13px] font-medium text-ink-muted">{count}</span>
+        <span className="text-ink-faint" aria-hidden>›</span>
+      </Link>
+      <div className="subcard mt-3 divide-y divide-line px-3.5 py-1.5">{children}</div>
+    </section>
+  );
+}
+
+function MyTasksCard({
+  tasks,
+  compact = false,
+}: {
+  tasks: { id: string; title: string; category: string | null; status: string; dueDate: Date | null; workstream: { color: string } | null }[];
+  compact?: boolean;
+}) {
+  const body =
+    tasks.length === 0 ? (
+      <p className="py-1.5 text-[12.5px] text-ink-faint">Nothing assigned to you right now.</p>
+    ) : (
+      tasks.map((t) => {
+        const due = dueLabel(t.dueDate);
+        return (
+          <Link key={t.id} href={`/tasks/${t.id}`} className="flex items-center justify-between gap-3 py-1.5">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: t.workstream?.color ?? '#8F8F89' }} />
+              <span className="truncate text-[13px] font-medium text-ink">{t.title}</span>
+            </span>
+            <span
+              className={clsx(
+                'shrink-0 text-[12px]',
+                due.tone === 'bad' ? 'text-brick' : due.tone === 'warn' ? 'text-brass' : 'text-ink-faint',
+              )}
+            >
+              {due.text}
+            </span>
+          </Link>
+        );
+      })
+    );
+  if (compact)
+    return (
+      <MiniCard icon={<IconTask size={14} />} title="On your plate" count={tasks.length} href="/tasks?filter=mine">
+        {body}
+      </MiniCard>
+    );
+  return (
+    <section className="card p-4 sm:p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Your tasks</h2>
+        <Link href="/tasks?filter=mine" className="text-[13px] font-semibold text-ink hover:underline">
+          View all ›
+        </Link>
+      </div>
+      <div className="subcard mt-3 divide-y divide-line px-3.5 py-1.5">{body}</div>
+    </section>
   );
 }

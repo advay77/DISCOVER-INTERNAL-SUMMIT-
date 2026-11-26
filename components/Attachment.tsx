@@ -25,7 +25,7 @@ export function Attachment({ file }: { file: Attached }) {
           src={url}
           alt={file.name}
           onError={() => setBroken(true)}
-          className="max-h-72 max-w-[22rem] rounded-[4px] border border-line object-cover"
+          className="max-h-72 max-w-[22rem] rounded-lg border border-line object-cover"
         />
         <span className="mt-1 block text-[11px] text-ink-faint">{file.name}</span>
       </a>
@@ -35,7 +35,7 @@ export function Attachment({ file }: { file: Attached }) {
   if (file.mime.startsWith('video/')) {
     return (
       <div className="mt-2 w-fit">
-        <video src={url} controls preload="metadata" className="max-h-80 max-w-[24rem] rounded-[4px] border border-line" />
+        <video src={url} controls preload="metadata" className="max-h-80 max-w-[24rem] rounded-lg border border-line" />
         <span className="mt-1 block text-[11px] text-ink-faint">{file.name}</span>
       </div>
     );
@@ -43,7 +43,7 @@ export function Attachment({ file }: { file: Attached }) {
 
   if (file.mime.startsWith('audio/')) {
     return (
-      <div className="mt-2 flex w-fit max-w-[22rem] items-center gap-3 rounded-[4px] border border-line bg-paper px-3 py-2">
+      <div className="mt-2 flex w-fit max-w-[22rem] items-center gap-3 rounded-lg border border-line bg-paper px-3 py-2">
         <audio src={url} controls preload="metadata" className="h-8" />
         <span className="shrink-0 text-[11px] text-ink-faint">
           {file.durationMs ? `${Math.round(file.durationMs / 1000)}s` : 'Voice note'}
@@ -57,7 +57,7 @@ export function Attachment({ file }: { file: Attached }) {
       href={url}
       target="_blank"
       rel="noreferrer"
-      className="mt-2 flex w-fit max-w-[20rem] items-center gap-2.5 rounded-[4px] border border-line bg-white px-3 py-2 hover:border-line-strong"
+      className="mt-2 flex w-fit max-w-[20rem] items-center gap-2.5 rounded-lg border border-line bg-white px-3 py-2 hover:border-line-strong"
     >
       <IconFiles size={17} className="shrink-0 text-ink-faint" />
       <span className="min-w-0">

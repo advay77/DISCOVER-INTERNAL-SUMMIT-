@@ -1,62 +1,80 @@
 import type { Config } from 'tailwindcss';
 
+const v = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+
 /**
  * DISCOVER OS design tokens.
  *
- * Register: a printed annual report, not a SaaS dashboard. Hairlines carry
- * structure instead of drop shadows; brass is reserved for things that need
- * a person's attention; type does the hierarchy.
+ * Register: a calm operations desk. Warm grey canvas, white rounded panels,
+ * near-black for primary actions and the active nav item, and one lime accent
+ * reserved for the single figure or card that should catch the eye.
+ *
+ * The `navy` scale keeps its name so every existing `bg-navy` / `text-navy`
+ * across the app follows the new ink colour without a rename.
  */
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './lib/**/*.{ts,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
+      // Every colour reads a CSS variable (RGB channels) set in globals.css,
+      // so `.dark` on <html> re-themes the whole app. `white` is the surface
+      // colour (cards, panels) and `navy` is the high-contrast colour (primary
+      // buttons, active nav) — they swap in dark mode. `snow` stays white in
+      // both themes, for text on coloured badges and avatars.
       colors: {
+        white: v('surface'),
+        snow: '#FFFFFF',
         navy: {
-          DEFAULT: '#0A2240',
-          900: '#061728',
-          800: '#0A2240',
-          700: '#143258',
-          600: '#1F4874',
+          DEFAULT: v('navy'),
+          900: v('navy-900'),
+          800: v('navy'),
+          700: v('navy-700'),
+          600: v('navy-600'),
+        },
+        lime: {
+          DEFAULT: '#E3F24A',
+          600: '#CFE02F',
+          100: v('lime-100'),
+          ink: '#2A2E05',
         },
         brand: {
-          DEFAULT: '#1F5FA8',
-          600: '#1A5192',
-          500: '#2F72BF',
-          100: '#E4EDF7',
-          50: '#F1F6FB',
+          DEFAULT: v('brand'),
+          600: v('brand-600'),
+          500: v('brand-500'),
+          100: v('brand-100'),
+          50: v('brand-50'),
         },
-        brass: {
-          DEFAULT: '#B4761F',
-          100: '#F6EDDD',
-        },
-        forest: { DEFAULT: '#1E7A4B', 100: '#E3F0E9' },
-        brick: { DEFAULT: '#A62B2B', 100: '#F6E6E6' },
+        brass: { DEFAULT: v('brass'), 100: v('brass-100') },
+        forest: { DEFAULT: v('forest'), 100: v('forest-100') },
+        brick: { DEFAULT: v('brick'), 100: v('brick-100') },
         ink: {
-          DEFAULT: '#1A1F26',
-          muted: '#5C6672',
-          faint: '#8A93A0',
+          DEFAULT: v('ink'),
+          muted: v('ink-muted'),
+          faint: v('ink-faint'),
         },
-        line: '#E0E1DD',
-        'line-strong': '#C9CBC5',
-        paper: '#F7F7F5',
+        line: v('line'),
+        'line-strong': v('line-strong'),
+        paper: v('paper'),
+        panel: v('panel'),
       },
       fontFamily: {
-        sans: ['"Public Sans"', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
-        display: ['Newsreader', 'ui-serif', 'Georgia', 'serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+        display: ['"Inter Tight"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        card: '6px',
+        card: '20px',
+        tile: '16px',
       },
       boxShadow: {
-        card: 'none',
-        pop: '0 12px 32px rgba(10,34,64,0.14)',
+        card: 'var(--shadow-card)',
+        pop: '0 16px 40px rgba(20,20,20,0.14)',
       },
       fontSize: {
         '2xs': ['10.5px', '14px'],
       },
       letterSpacing: {
-        label: '0.08em',
+        label: '0.04em',
       },
     },
   },

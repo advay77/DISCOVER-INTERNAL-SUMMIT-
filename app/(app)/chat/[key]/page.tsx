@@ -79,7 +79,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
                         key={m.channel.id}
                         href={`/chat/${m.channel.key}`}
                         className={clsx(
-                          'flex items-center gap-2 rounded-[4px] px-2 py-[5px] text-[13px] transition',
+                          'flex items-center gap-2 rounded-lg px-2 py-[5px] text-[13px] transition',
                           active
                             ? 'bg-navy font-semibold text-white'
                             : n > 0
@@ -96,7 +96,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
                           />
                         )}
                         {n > 0 && !active && (
-                          <span className="rounded-[3px] bg-brick px-1 text-[10px] font-bold text-white">
+                          <span className="rounded-md bg-brick px-1 text-[10px] font-bold text-snow">
                             {n}
                           </span>
                         )}

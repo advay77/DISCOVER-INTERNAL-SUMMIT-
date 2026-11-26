@@ -113,7 +113,7 @@ export function MobileTabBar({ nav }: { nav: NavEntry[] }) {
                 <span className="relative">
                   <Icon size={21} />
                   {!!n.badge && n.href === '/chat' && (
-                    <span className="absolute -right-2 -top-1.5 min-w-[16px] rounded-full bg-brick px-1 text-center text-[9.5px] font-bold leading-4 text-white">
+                    <span className="absolute -right-2 -top-1.5 min-w-[16px] rounded-full bg-brick px-1 text-center text-[9.5px] font-bold leading-4 text-snow">
                       {n.badge > 9 ? '9+' : n.badge}
                     </span>
                   )}

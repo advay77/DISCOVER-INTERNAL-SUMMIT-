@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import clsx from 'clsx';
 import { Avatar, Pill } from '@/components/ui';
 import { dueLabel } from '@/lib/format';
@@ -37,6 +37,9 @@ export function TaskBoard({
   canEdit: boolean;
 }) {
   const [items, setItems] = useState(tasks);
+  // Take the server's list whenever it changes (a new task, router.refresh()),
+  // otherwise a task created from the modal only appears after a full reload.
+  useEffect(() => setItems(tasks), [tasks]);
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [, start] = useTransition();
@@ -94,7 +97,7 @@ export function TaskBoard({
                     onDragStart={() => setDragging(t.id)}
                     onDragEnd={() => setDragging(null)}
                     className={clsx(
-                      'group rounded-lg border border-line bg-white p-3 transition hover:shadow-card',
+                      'group rounded-xl border border-line bg-white p-3 transition hover:shadow-card',
                       canEdit && 'cursor-grab active:cursor-grabbing',
                       dragging === t.id && 'opacity-40',
                     )}
@@ -111,7 +114,25 @@ export function TaskBoard({
                     <p className="mt-1 pl-4 text-[11.5px] text-ink-faint">{t.category}</p>
                     <div className="mt-2.5 flex items-center justify-between gap-2 pl-4">
                       <Pill tone={due.tone}>{due.text}</Pill>
-                      {t.owner && <Avatar name={t.owner.name} accent={t.owner.accent} size={22} />}
+                      <span className="flex items-center gap-1.5">
+                        {/* Drag and drop has no touch support, so every card also
+                            carries a status menu — phones, tablets and keyboards. */}
+                        {canEdit && (
+                          <select
+                            aria-label={`Move “${t.title}”`}
+                            value={t.status}
+                            onChange={(e) => move(t.id, e.target.value)}
+                            className="h-7 max-w-[7.5rem] cursor-pointer rounded-full border border-line bg-panel px-2 text-[11.5px] font-medium text-ink-muted outline-none hover:text-ink focus:ring-2 focus:ring-lime/60 [@media(hover:hover)]:lg:opacity-0 [@media(hover:hover)]:lg:focus:opacity-100 [@media(hover:hover)]:lg:group-hover:opacity-100"
+                          >
+                            {columns.map((c) => (
+                              <option key={c.key} value={c.key}>
+                                {c.label}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {t.owner && <Avatar name={t.owner.name} accent={t.owner.accent} size={22} />}
+                      </span>
                     </div>
                   </article>
                 );

@@ -3,6 +3,7 @@ import { currentUser } from '@/lib/auth';
 import { IS_DEMO } from '@/lib/db';
 import { Logo } from '@/components/Logo';
 import { LoginForm } from './LoginForm';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default async function LoginPage() {
   const user = await currentUser();
@@ -43,7 +44,7 @@ export default async function LoginPage() {
             the work rather than scattered across inboxes and group chats.
           </p>
 
-          <p className="mt-10 border-l-2 border-brass pl-5 text-[13.5px] leading-relaxed text-white/70">
+          <p className="mt-10 border-l-2 border-lime pl-5 text-[13.5px] leading-relaxed text-white/70">
             What you can see follows what you do. The President sets the rest.
           </p>
         </div>
@@ -54,7 +55,8 @@ export default async function LoginPage() {
       </div>
 
       {/* Right: the form */}
-      <div className="flex items-center justify-center bg-white px-6 py-14 sm:px-14">
+      <div className="relative flex items-center justify-center bg-white px-6 py-14 sm:px-14">
+        <ThemeToggle className="absolute right-4 top-4 lg:bg-panel lg:shadow-none" />
         <div className="w-full max-w-[23rem]">
           <div className="mb-10 lg:hidden">
             <Logo tone="dark" size="md" />
@@ -66,12 +68,12 @@ export default async function LoginPage() {
           <h2 className="display mt-3 text-[32px] leading-tight text-ink">Sign in</h2>
 
           {IS_DEMO && (
-            <div className="mt-5 rounded-[5px] border-l-2 border-brass bg-brass-100 px-4 py-3">
+            <div className="mt-5 rounded-xl border-l-2 border-brass bg-brass-100 px-4 py-3">
               <p className="text-[12.5px] font-semibold text-ink">Demo</p>
               <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">
                 Everything works, and anything you change here resets on its own. Sign in with any
                 address below and the password{' '}
-                <code className="rounded-[2px] bg-white px-1 py-0.5 font-semibold text-ink">
+                <code className="rounded bg-white px-1 py-0.5 font-semibold text-ink">
                   discover-demo
                 </code>
                 .

@@ -38,7 +38,7 @@ export function BrowseChannels() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="w-full rounded-[4px] px-2 py-1.5 text-left text-[12.5px] font-medium text-ink-muted transition hover:bg-paper hover:text-ink"
+        className="w-full rounded-lg px-2 py-1.5 text-left text-[12.5px] font-medium text-ink-muted transition hover:bg-paper hover:text-ink"
       >
         Browse channels
       </button>
@@ -58,7 +58,7 @@ export function BrowseChannels() {
               </button>
             </div>
 
-            <div className="max-h-72 divide-y divide-line overflow-y-auto rounded-[5px] border border-line">
+            <div className="max-h-72 divide-y divide-line overflow-y-auto rounded-xl border border-line">
               {rows === null && (
                 <p className="px-3 py-6 text-center text-[12.5px] text-ink-faint">Loading…</p>
               )}
