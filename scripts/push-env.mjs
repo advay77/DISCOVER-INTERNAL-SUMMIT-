@@ -38,15 +38,15 @@ for (const target of targets) {
       failed = true;
       continue;
     }
-    spawnSync('npx', ['vercel', 'env', 'rm', name, target, '--yes'], {
-      shell: process.platform === 'win32',
-      stdio: 'ignore',
-    });
-    const r = spawnSync('npx', ['vercel', 'env', 'add', name, target], {
-      shell: process.platform === 'win32',
-      input: value,
-      encoding: 'utf8',
-    });
+    const r = spawnSync(
+      'npx',
+      ['vercel', 'env', 'add', name, '--environment', target, '--force', '--yes', '--sensitive'],
+      {
+        shell: process.platform === 'win32',
+        input: value,
+        encoding: 'utf8',
+      },
+    );
     if (r.status === 0) console.log(`✓ ${name} → ${target}`);
     else {
       failed = true;
