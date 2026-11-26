@@ -5,6 +5,7 @@ import Link from 'next/link';
 import clsx from 'clsx';
 import { Avatar } from '@/components/ui';
 import { IconSearch } from '@/components/icons';
+import { MessageButton } from '@/components/MessageButton';
 
 export type Person = {
   id: string;
@@ -19,7 +20,17 @@ export type Person = {
   href: string | null;
 };
 
-export function Directory({ people, roles }: { people: Person[]; roles: { key: string; name: string }[] }) {
+export function Directory({
+  people,
+  roles,
+  meId,
+  canDm = false,
+}: {
+  people: Person[];
+  roles: { key: string; name: string }[];
+  meId: string;
+  canDm?: boolean;
+}) {
   const [q, setQ] = useState('');
   const [role, setRole] = useState<string | null>(null);
 
@@ -95,13 +106,18 @@ export function Directory({ people, roles }: { people: Person[]; roles: { key: s
               </div>
             </>
           );
-          return p.href ? (
-            <Link prefetch={false} key={p.id} href={p.href} className="subcard flex items-start gap-3 p-3.5 transition hover:ring-1 hover:ring-line-strong">
-              {body}
-            </Link>
-          ) : (
-            <div key={p.id} className="subcard flex items-start gap-3 p-3.5">
-              {body}
+          const dm = canDm && p.id !== meId;
+          return (
+            // The Message button sits beside the card's link, never inside it.
+            <div key={p.id} className="relative">
+              {p.href ? (
+                <Link prefetch={false} href={p.href} className={`subcard flex h-full items-start gap-3 p-3.5 transition hover:ring-1 hover:ring-line-strong ${dm ? 'pb-12' : ''}`}>
+                  {body}
+                </Link>
+              ) : (
+                <div className={`subcard flex h-full items-start gap-3 p-3.5 ${dm ? 'pb-12' : ''}`}>{body}</div>
+              )}
+              {dm && <MessageButton userId={p.id} name={p.name} className="absolute bottom-2.5 right-2.5 bg-white" />}
             </div>
           );
         })}

@@ -30,6 +30,7 @@ export default async function AdminPage({
     currentEvent(),
     db.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 25, include: { actor: true } }),
     db.channel.findMany({
+      where: { type: { not: 'dm' } },
       orderBy: [{ type: 'asc' }, { name: 'asc' }],
       include: { workstream: true, _count: { select: { members: true, messages: true } } },
     }),

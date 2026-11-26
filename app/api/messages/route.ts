@@ -170,8 +170,14 @@ export async function DELETE(req: Request) {
   const id = new URL(req.url).searchParams.get('id');
   const message = id ? await db.message.findUnique({ where: { id } }) : null;
   if (!message || message.deletedAt) return NextResponse.json({ error: 'not found' }, { status: 404 });
-  if (message.authorId !== user.id && !can(user, 'admin:users')) {
-    return NextResponse.json({ error: 'You can only delete your own messages.' }, { status: 403 });
+  if (message.authorId !== user.id) {
+    // Admins may remove anyone's message in a channel — never inside a DM.
+    const channel = message.channelId
+      ? await db.channel.findUnique({ where: { id: message.channelId }, select: { type: true } })
+      : null;
+    if (!can(user, 'admin:users') || channel?.type === 'dm') {
+      return NextResponse.json({ error: 'You can only delete your own messages.' }, { status: 403 });
+    }
   }
   await db.message.update({ where: { id: message.id }, data: { deletedAt: new Date(), body: '' } });
   await ping(scopeOf(message));
@@ -311,16 +317,21 @@ export async function POST(req: Request) {
   if (channelId) {
     const channel = await db.channel.findUnique({
       where: { id: channelId },
-      select: { key: true, name: true },
+      select: { key: true, name: true, type: true },
     });
     const members = await db.channelMember.findMany({
       where: { channelId, userId: { not: user.id } },
       select: { userId: true },
     });
     const preview = messageText.replace(/\s+/g, ' ').trim().slice(0, 140);
-    const note = preview
-      ? `${user.name} in #${channel?.name ?? 'channel'}: ${preview}`
-      : `${user.name} sent a file in #${channel?.name ?? 'channel'}`;
+    const isDm = channel?.type === 'dm';
+    const note = isDm
+      ? preview
+        ? `${user.name}: ${preview}`
+        : `${user.name} sent you a file`
+      : preview
+        ? `${user.name} in #${channel?.name ?? 'channel'}: ${preview}`
+        : `${user.name} sent a file in #${channel?.name ?? 'channel'}`;
     const recipients = members.filter((m) => !mentionedIds.has(m.userId));
     if (recipients.length && channel) {
       await db.notification.createMany({

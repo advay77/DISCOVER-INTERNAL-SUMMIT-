@@ -7,7 +7,9 @@ import { can } from '@/lib/authz';
 export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
-  if (!can(user, 'team:view')) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  // The member picker serves the directory and the "New message" picker, so
+  // either permission is enough. Names and roles only.
+  if (!can(user, 'team:view') && !can(user, 'chat:dm')) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
   const people = await db.user.findMany({
     where: { isActive: true },

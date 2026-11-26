@@ -181,7 +181,7 @@ export default async function TeamPage() {
         })}
       </div>
 
-      <Directory people={directory} roles={roles} />
+      <Directory people={directory} roles={roles} meId={user.id} canDm={can(user, 'chat:dm')} />
 
       {!showContact && (
         <p className="text-[12.5px] text-ink-faint">

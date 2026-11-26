@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { PageHeader, Card, Avatar, Pill } from '@/components/ui';
 import { longDate } from '@/lib/format';
 import { ProfileForm } from '../ProfileForm';
+import { MessageButton } from '@/components/MessageButton';
 
 export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const me = await requireUser();
@@ -52,7 +53,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
       <Card className="mb-5">
         <div className="flex items-start gap-4">
           <Avatar name={person.name} accent={person.accent} size={52} />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-[18px] font-semibold text-ink">{person.name}</p>
             <p className="text-[13px] text-ink-muted">{person.title || 'No title yet'}</p>
             <p className="text-[12.5px] text-ink-faint">{person.company || 'No company yet'}</p>
@@ -61,6 +62,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
               <Pill tone={person.isActive ? 'ok' : 'neutral'}>{person.isActive ? 'Active' : 'Deactivated'}</Pill>
             </div>
           </div>
+          {!isSelf && person.isActive && can(me, 'chat:dm') && <MessageButton userId={person.id} name={person.name} />}
         </div>
 
         <dl className="mt-6 grid gap-4 border-t border-line pt-5 sm:grid-cols-2">
