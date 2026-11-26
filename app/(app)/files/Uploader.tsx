@@ -10,6 +10,8 @@ export function Uploader({ folders }: { folders: string[] }) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
+  const [over, setOver] = useState(false);
   const router = useRouter();
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -30,6 +32,7 @@ export function Uploader({ folders }: { folders: string[] }) {
         onProgress: setProgress,
       });
       setOpen(false);
+      setPicked(null);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed.');
@@ -48,23 +51,42 @@ export function Uploader({ folders }: { folders: string[] }) {
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/35 p-4 py-10 backdrop-blur-sm">
           <form onSubmit={submit} className="card my-auto w-full max-w-md space-y-4 p-6">
             <div className="flex items-center justify-between">
-              <h2 className="display text-[22px] text-ink">Upload a file</h2>
+              <h2 className="text-[18px] font-semibold text-ink">Upload a file</h2>
               <button
                 type="button"
                 onClick={() => !busy && setOpen(false)}
                 className="text-ink-faint hover:text-ink"
+                aria-label="Close"
               >
                 ✕
               </button>
             </div>
 
-            <div>
-              <label className="label">File</label>
-              <input type="file" name="file" required disabled={busy} className="input mt-1.5 py-1.5" />
-              <p className="mt-1.5 text-[11.5px] text-ink-faint">
-                Up to {MAX_UPLOAD_MB} MB — documents, decks, photos, video.
-              </p>
-            </div>
+            {/* The real file input covers the drop zone, so clicking and dropping both work. */}
+            <label
+              className={
+                'relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-8 text-center transition ' +
+                (over ? 'border-navy bg-lime-100/60' : picked ? 'border-forest/40 bg-forest-100/50' : 'border-line-strong bg-panel hover:border-ink/40')
+              }
+              onDragEnter={() => setOver(true)}
+              onDragLeave={() => setOver(false)}
+              onDrop={() => setOver(false)}
+            >
+              <input
+                type="file"
+                name="file"
+                required
+                disabled={busy}
+                aria-label="File"
+                onChange={(e) => setPicked(e.target.files?.[0]?.name ?? null)}
+                className="absolute inset-0 cursor-pointer opacity-0"
+              />
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-card">
+                <IconPlus size={18} />
+              </span>
+              <span className="mt-3 text-[14px] font-semibold text-ink">{picked ?? 'Drop a file here, or click to choose'}</span>
+              <span className="mt-1 text-[12px] text-ink-faint">Up to {MAX_UPLOAD_MB} MB — documents, decks, photos, video.</span>
+            </label>
 
             <div>
               <label className="label">Folder</label>
@@ -81,8 +103,8 @@ export function Uploader({ folders }: { folders: string[] }) {
                   <span>Uploading</span>
                   <span className="tabular-nums">{Math.round(progress * 100)}%</span>
                 </div>
-                <div className="mt-1 h-[3px] w-full bg-line">
-                  <div className="h-full bg-brand transition-all" style={{ width: `${progress * 100}%` }} />
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-line">
+                  <div className="h-full rounded-full bg-navy transition-all" style={{ width: `${progress * 100}%` }} />
                 </div>
               </div>
             )}
