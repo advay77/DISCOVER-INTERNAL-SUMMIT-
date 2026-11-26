@@ -25,6 +25,7 @@ export default async function Dashboard() {
     done,
     overdue,
     dueWeek,
+    mineOpen,
     myTasks,
     upcoming,
     activity,
@@ -50,6 +51,7 @@ export default async function Dashboard() {
         AND: [taskWhere, { status: { not: 'done' }, dueDate: { gte: now, lte: weekEnd } }],
       },
     }),
+    db.task.count({ where: { ownerId: user.id, status: { not: 'done' } } }),
     db.task.findMany({
       where: { ownerId: user.id, status: { not: 'done' } },
       orderBy: [{ dueDate: 'asc' }],
@@ -132,19 +134,36 @@ export default async function Dashboard() {
 
   const countdown = event ? daysUntil(event.startDate) : 0;
   const progress = pct(done, total);
+  const first = user.name.split(' ')[0];
 
   return (
     <div className="mx-auto max-w-[1340px] space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="text-[18px] font-semibold tracking-tight text-ink">{first}</h1>
+          <p className="text-[13px] text-ink-muted">Your desk for this cycle.</p>
+        </div>
+        {overdue > 0 && (
+          <Link
+            href="/tasks?filter=overdue"
+            className="inline-flex items-center gap-2 rounded-[5px] border border-brick/25 bg-brick/10 px-3 py-1.5 text-[13px] font-semibold text-brick hover:bg-brick/15"
+          >
+            {overdue} overdue
+            <span aria-hidden>→</span>
+          </Link>
+        )}
+      </div>
+
       {/* Hero — a masthead, not a gradient card */}
-      <section className="rounded-card bg-navy-900 px-4 py-5 text-white sm:px-6 sm:py-7 lg:px-9 lg:py-9">
+      <section className="rounded-card bg-navy-900 px-4 py-5 text-white sm:px-6 sm:py-6 lg:px-8 lg:py-7">
         <div className="flex flex-wrap items-start justify-between gap-x-10 gap-y-6">
           <div className="min-w-0">
             <p className="text-2xs font-semibold uppercase tracking-label text-brass">
               {event?.theme ?? 'Current cycle'}
             </p>
-            <h1 className="display mt-2 text-[26px] leading-[1.05] sm:mt-3 sm:text-[38px] lg:text-[46px]">
+            <p className="display mt-2 text-[26px] leading-[1.05] sm:mt-2 sm:text-[34px] lg:text-[40px]">
               {event?.name ?? 'No active cycle'}
-            </h1>
+            </p>
             {event && (
               <p className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-white/55 sm:mt-4 sm:gap-x-6 sm:text-[13px]">
                 <span>{dateRange(event.startDate, event.endDate)}</span>
@@ -190,12 +209,12 @@ export default async function Dashboard() {
       {/* Counters */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatTile value={overdue} label="Overdue" tone="bad" icon={<IconAlert size={17} />} href="/tasks?filter=overdue" />
-        <StatTile value={dueWeek} label="Due this week" tone="warn" icon={<IconClock size={17} />} href="/tasks" />
+        <StatTile value={dueWeek} label="Due this week" tone="warn" icon={<IconClock size={17} />} href="/tasks?filter=week" />
         <StatTile value={done} label="Completed" tone="ok" icon={<IconCheck size={17} />} href="/tasks?filter=done" />
         {can(user, 'attendees:view') ? (
           <StatTile value={attendeeCount} label="Registered" tone="navy" icon={<IconAttendees size={17} />} href="/attendees" />
         ) : (
-          <StatTile value={myTasks.length} label="On your plate" tone="navy" icon={<IconTask size={17} />} href="/tasks?filter=mine" />
+          <StatTile value={mineOpen} label="On your plate" tone="navy" icon={<IconTask size={17} />} href="/tasks?filter=mine" />
         )}
       </div>
 
@@ -239,7 +258,15 @@ export default async function Dashboard() {
         </Card>
 
         {/* Upcoming deadlines */}
-        <Card title="Upcoming deadlines" bodyClass="divide-y divide-line">
+        <Card
+          title="Next deadlines"
+          action={
+            <Link href="/tasks" className="inline-flex min-h-[40px] items-center text-[13px] font-semibold text-brand hover:underline lg:min-h-0">
+              All tasks →
+            </Link>
+          }
+          bodyClass="divide-y divide-line"
+        >
           {upcoming.length === 0 ? (
             <div className="p-5">
               <Empty title="No deadlines in view" />
@@ -248,7 +275,7 @@ export default async function Dashboard() {
             upcoming.map((t) => {
               const due = dueLabel(t.dueDate);
               return (
-                <div key={t.id} className="flex items-center gap-3 px-5 py-3">
+                <Link key={t.id} href={`/tasks/${t.id}`} className="flex items-center gap-3 px-5 py-3 transition hover:bg-paper">
                   <div className="w-11 shrink-0 text-center">
                     <div className="text-[10px] font-bold uppercase text-ink-faint">
                       {shortDate(t.dueDate).split(' ')[0]}
@@ -262,47 +289,46 @@ export default async function Dashboard() {
                     {t.owner && <p className="text-[12px] text-ink-faint">{t.owner.name}</p>}
                   </div>
                   <Pill tone={due.tone}>{due.text}</Pill>
-                </div>
+                </Link>
               );
             })
           )}
         </Card>
       </div>
 
-      {/* Rings + questions + activity */}
-      <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
-        <Card title="Where the cycle stands">
-          <div className="flex items-start justify-around gap-2">
-            {can(user, 'speakers:view') && (
-              <Ring
-                value={pct(speakerConfirmed, speakerTotal)}
-                label="Speakers"
-                sub={`${speakerConfirmed} / ${speakerTotal} confirmed`}
-                tone="#17A34A"
-              />
-            )}
-            {can(user, 'sponsors:view') && (
-              <Ring
-                value={pct(sponsorConfirmed, sponsorTotal)}
-                label="Sponsors"
-                sub={`${sponsorConfirmed} / ${sponsorTotal} confirmed`}
-                tone="#1D6FE0"
-              />
-            )}
-            {can(user, 'vendors:view') && (
-              <Ring
-                value={pct(vendorSettled, vendorTotal)}
-                label="Logistics"
-                sub={`${vendorSettled} / ${vendorTotal} settled`}
-                tone="#D97708"
-              />
-            )}
-            {!can(user, 'speakers:view') && !can(user, 'sponsors:view') && (
-              <Ring value={progress} label="Your tasks" sub={`${done} of ${total} done`} />
-            )}
-          </div>
-        </Card>
+      <Card title="Where the cycle stands">
+        <div className="flex flex-wrap items-start justify-around gap-x-8 gap-y-6 sm:justify-start sm:gap-x-14">
+          {can(user, 'speakers:view') && (
+            <Ring
+              value={pct(speakerConfirmed, speakerTotal)}
+              label="Speakers"
+              sub={`${speakerConfirmed} / ${speakerTotal} confirmed`}
+              tone="#17A34A"
+            />
+          )}
+          {can(user, 'sponsors:view') && (
+            <Ring
+              value={pct(sponsorConfirmed, sponsorTotal)}
+              label="Sponsors"
+              sub={`${sponsorConfirmed} / ${sponsorTotal} confirmed`}
+              tone="#1D6FE0"
+            />
+          )}
+          {can(user, 'vendors:view') && (
+            <Ring
+              value={pct(vendorSettled, vendorTotal)}
+              label="Logistics"
+              sub={`${vendorSettled} / ${vendorTotal} settled`}
+              tone="#D97708"
+            />
+          )}
+          {!can(user, 'speakers:view') && !can(user, 'sponsors:view') && (
+            <Ring value={progress} label="Your tasks" sub={`${done} of ${total} done`} />
+          )}
+        </div>
+      </Card>
 
+      <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
         {can(user, 'questions:view') && (
           <Card
             title="Open questions"
@@ -319,14 +345,14 @@ export default async function Dashboard() {
               </div>
             ) : (
               openQuestions.map((q) => (
-                <div key={q.id} className="px-5 py-3">
+                <Link key={q.id} href="/questions" className="block px-5 py-3 transition hover:bg-paper">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-[13.5px] font-medium text-ink">{q.question}</p>
+                    <p className="line-clamp-2 text-[13.5px] font-medium text-ink">{q.question}</p>
                     <StatusPill status={q.status} />
                   </div>
-                  {q.update && <p className="mt-1 text-[12px] leading-snug text-ink-muted">{q.update}</p>}
+                  {q.update && <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-ink-muted">{q.update}</p>}
                   {q.owner && <p className="mt-1 text-[11px] text-ink-faint">{q.owner.name}</p>}
-                </div>
+                </Link>
               ))
             )}
           </Card>
@@ -384,32 +410,48 @@ export default async function Dashboard() {
           }
           bodyClass="divide-y divide-line"
         >
-          {recentMessages.map((m) => (
-            <Link
-              key={m.id}
-              href={`/chat/${m.channel?.key}`}
-              className="flex items-start gap-3 px-5 py-3 hover:bg-paper"
-            >
-              <Avatar name={m.author.name} accent={m.author.accent} size={30} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="truncate text-[13px] font-semibold text-ink">{m.author.name}</p>
-                  <span className="shrink-0 text-[11px] text-ink-faint">{relativeTime(m.createdAt)}</span>
-                </div>
-                <p className="truncate text-[12.5px] text-ink-muted">{m.body}</p>
-                <p className="text-[11px] text-ink-faint">#{m.channel?.name}</p>
-              </div>
-            </Link>
-          ))}
-          {activity.slice(0, 2).map((a) => (
-            <div key={a.id} className="flex items-center gap-3 px-5 py-2.5">
-              <span className="text-[11px] text-ink-faint">●</span>
-              <p className="min-w-0 flex-1 truncate text-[12.5px] text-ink-muted">
-                <strong className="font-semibold text-ink">{a.actor?.name}</strong> {a.summary}
-              </p>
-              <span className="shrink-0 text-[11px] text-ink-faint">{relativeTime(a.createdAt)}</span>
+          {recentMessages.length === 0 && activity.length === 0 ? (
+            <div className="p-5">
+              <Empty title="Quiet for now" hint="New channel messages and updates show up here." />
             </div>
-          ))}
+          ) : (
+            <>
+              {recentMessages.length === 0 && (
+                <p className="px-5 py-3 text-[12.5px] text-ink-faint">No channel messages yet.</p>
+              )}
+              {recentMessages.map((m) => (
+                <Link
+                  key={m.id}
+                  href={`/chat/${m.channel?.key}`}
+                  className="flex items-start gap-3 px-5 py-3 hover:bg-paper"
+                >
+                  <Avatar name={m.author.name} accent={m.author.accent} size={30} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="truncate text-[13px] font-semibold text-ink">{m.author.name}</p>
+                      <span className="shrink-0 text-[11px] text-ink-faint">{relativeTime(m.createdAt)}</span>
+                    </div>
+                    <p className="truncate text-[12.5px] text-ink-muted">{m.body}</p>
+                    <p className="text-[11px] text-ink-faint">#{m.channel?.name}</p>
+                  </div>
+                </Link>
+              ))}
+              {activity.slice(0, 2).length > 0 && (
+                <p className="bg-paper px-5 py-1.5 text-[10px] font-semibold uppercase tracking-label text-ink-faint">
+                  Updates
+                </p>
+              )}
+              {activity.slice(0, 2).map((a) => (
+                <div key={a.id} className="flex items-center gap-3 px-5 py-2.5">
+                  <span className="text-[11px] text-ink-faint">●</span>
+                  <p className="min-w-0 flex-1 truncate text-[12.5px] text-ink-muted">
+                    <strong className="font-semibold text-ink">{a.actor?.name}</strong> {a.summary}
+                  </p>
+                  <span className="shrink-0 text-[11px] text-ink-faint">{relativeTime(a.createdAt)}</span>
+                </div>
+              ))}
+            </>
+          )}
         </Card>
       </div>
     </div>

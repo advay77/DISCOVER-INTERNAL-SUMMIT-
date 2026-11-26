@@ -99,13 +99,13 @@ export async function currentUser() {
   return loadUser(token.uid, token.epoch);
 }
 
-export async function signIn(email: string, password: string, door?: 'board' | 'volunteer') {
+export async function signIn(email: string, password: string) {
   const clean = email.toLowerCase().trim().slice(0, 200);
 
   // Guard the address first, so guessing is slow regardless of the account.
   const head = await headers();
   const [byIp, byAccount] = await Promise.all([
-    rateLimit(clientKey(head, 'login'), LIMITS.login.limit, LIMITS.login.windowMs),
+    rateLimit(clientKey(head, 'login'), LIMITS.loginIp.limit, LIMITS.loginIp.windowMs),
     rateLimit(`login:acct:${clean}`, LIMITS.login.limit, LIMITS.login.windowMs),
   ]);
 
@@ -117,7 +117,7 @@ export async function signIn(email: string, password: string, door?: 'board' | '
     };
   }
 
-  const user = await db.user.findUnique({ where: { email: clean }, include: { role: true } });
+  const user = await db.user.findUnique({ where: { email: clean } });
 
   // One message for both failures, so the form cannot be used to discover which
   // addresses have accounts. The hash still runs when there is no user, so the
@@ -132,16 +132,6 @@ export async function signIn(email: string, password: string, door?: 'board' | '
 
   const good = await verifyPassword(password, user.passwordHash);
   if (!good) return WRONG;
-
-  if (door) {
-    const isVolunteer = user.role.key === 'volunteer';
-    if (door === 'volunteer' && !isVolunteer) {
-      return { ok: false as const, error: 'That account signs in under Board & officers.' };
-    }
-    if (door === 'board' && isVolunteer) {
-      return { ok: false as const, error: 'That account signs in under Volunteers.' };
-    }
-  }
 
   await resetLimit(`login:acct:${clean}`);
   await resetLimit(clientKey(head, 'login'));

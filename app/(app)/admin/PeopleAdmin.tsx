@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Avatar, Pill } from '@/components/ui';
-import { setUserRole, setUserActive, inviteUser } from '@/app/actions';
+import { setUserRole, setUserActive } from '@/app/actions';
 
 type P = {
   id: string;
@@ -22,18 +22,14 @@ type P = {
 export function PeopleAdmin({
   people,
   roles,
-  workstreams,
   meId,
   canChangeRoles,
 }: {
   people: P[];
   roles: { id: string; name: string }[];
-  workstreams: { id: string; name: string }[];
   meId: string;
   canChangeRoles: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
@@ -53,16 +49,12 @@ export function PeopleAdmin({
         <div>
           <h2 className="text-[15px] font-semibold text-ink">People</h2>
           <p className="text-[12.5px] text-ink-muted">
-            Deactivate rather than delete — a departing director&rsquo;s history stays intact.
+            These are the issued accounts. Deactivate rather than delete — history stays intact.
           </p>
         </div>
-        <button className="btn-primary btn-sm" onClick={() => setOpen(true)}>
-          + Invite member
-        </button>
       </header>
 
       {error && <p className="bg-brick/10 px-5 py-2 text-[13px] font-medium text-brick">{error}</p>}
-      {notice && <p className="bg-forest/10 px-5 py-2 text-[13px] font-medium text-forest">{notice}</p>}
 
       <div className="overflow-x-auto">
       <table className="w-full min-w-[720px]">
@@ -139,87 +131,6 @@ export function PeopleAdmin({
         </tbody>
       </table>
       </div>
-
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/35 p-4 py-10 backdrop-blur-sm">
-          <div className="card my-auto w-full max-w-lg p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-ink">Invite a member</h2>
-              <button onClick={() => setOpen(false)} className="text-ink-faint hover:text-ink">
-                ✕
-              </button>
-            </div>
-
-            <form
-              action={(fd) =>
-                start(async () => {
-                  const res = await inviteUser(fd);
-                  if ((res as any)?.error) setError((res as any).error);
-                  else {
-                    setOpen(false);
-                    setNotice(
-                      'Invited. Their first password is recorded in the audit log — send it to them privately and have them change it.',
-                    );
-                    router.refresh();
-                  }
-                })
-              }
-              className="space-y-3.5"
-            >
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">Name</label>
-                  <input name="name" className="input mt-1.5" required />
-                </div>
-                <div>
-                  <label className="label">Email</label>
-                  <input name="email" type="email" className="input mt-1.5" required />
-                </div>
-                <div>
-                  <label className="label">Title</label>
-                  <input name="title" className="input mt-1.5" />
-                </div>
-                <div>
-                  <label className="label">Company</label>
-                  <input name="company" className="input mt-1.5" />
-                </div>
-              </div>
-
-              <div>
-                <label className="label">Role</label>
-                <select name="roleId" className="input mt-1.5" required>
-                  {roles.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="label">Workstreams</label>
-                <div className="mt-1.5 grid grid-cols-2 gap-2">
-                  {workstreams.map((w) => (
-                    <label key={w.id} className="flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-[13px]">
-                      <input type="checkbox" name="workstreams" value={w.id} className="accent-brand" />
-                      {w.name}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-1">
-                <button type="button" className="btn-ghost" onClick={() => setOpen(false)}>
-                  Cancel
-                </button>
-                <button className="btn-primary" disabled={pending}>
-                  {pending ? 'Inviting…' : 'Invite'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </section>
   );
 }

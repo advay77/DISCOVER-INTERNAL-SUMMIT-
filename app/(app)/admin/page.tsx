@@ -134,7 +134,6 @@ export default async function AdminPage({
             workstreams: p.memberships.map((m) => m.workstream.name),
           }))}
           roles={roles.map((r) => ({ id: r.id, name: r.name }))}
-          workstreams={workstreams.map((w) => ({ id: w.id, name: w.name }))}
           meId={user.id}
           canChangeRoles={can(user, 'admin:roles')}
         />

@@ -3,17 +3,14 @@
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { requireUser, allows, can, scopeOf } from '@/lib/authz';
-import { hashPassword } from '@/lib/auth';
 import { CAPABILITY_KEYS, SCOPES } from '@/lib/capabilities';
 import {
   text,
   optionalText,
-  email as validEmail,
   oneOf,
   date as validDate,
   wholeNumber,
   id as validId,
-  idList,
   STATUSES,
   LIMITS as BOUND,
 } from '@/lib/validate';
@@ -330,55 +327,6 @@ export async function setUserActive(userId: string, active: boolean) {
   });
   revalidatePath('/admin');
   return { ok: true };
-}
-
-export async function inviteUser(data: FormData) {
-  const actor = await requireUser();
-  if (!can(actor, 'admin:users')) return { error: 'You cannot invite members.' };
-
-  const email = validEmail(data.get('email'));
-  const name = text(data.get('name'), BOUND.name);
-  const roleId = validId(data.get('roleId'));
-  if (!email) return { error: 'That does not look like an email address.' };
-  if (!name || !roleId) return { error: 'Name, email and role are all needed.' };
-
-  const existing = await db.user.findUnique({ where: { email } });
-  if (existing) return { error: 'That email already has an account.' };
-
-  // A random first password. The member resets it on first sign-in.
-  const temp = Math.random().toString(36).slice(2, 10) + 'Aa1';
-  const created = await db.user.create({
-    data: {
-      name,
-      email,
-      passwordHash: await hashPassword(temp),
-      title: optionalText(data.get('title'), BOUND.title),
-      company: optionalText(data.get('company'), BOUND.name),
-      roleId,
-    },
-  });
-
-  const workstreamIdsRaw = idList(data.getAll('workstreams'), 10);
-  if (workstreamIdsRaw.length) {
-    await db.membership.createMany({
-      data: workstreamIdsRaw.map((workstreamId) => ({ userId: created.id, workstreamId })),
-    });
-    // Join the matching workstream channels.
-    const channels = await db.channel.findMany({ where: { workstreamId: { in: workstreamIdsRaw } } });
-    const publics = await db.channel.findMany({ where: { type: 'public' } });
-    const joined = [...channels, ...publics];
-    if (joined.length) {
-      await db.channelMember.createMany({
-        data: joined.map((c) => ({ channelId: c.id, userId: created.id })),
-      });
-    }
-  }
-
-  await db.auditLog.create({
-    data: { actorId: actor.id, action: 'user.invite', target: `${name} <${email}>`, after: temp },
-  });
-  revalidatePath('/admin');
-  return { ok: true, tempPassword: temp };
 }
 
 export async function updateProfile(data: FormData) {

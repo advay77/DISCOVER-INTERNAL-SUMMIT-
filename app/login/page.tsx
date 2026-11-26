@@ -4,16 +4,9 @@ import { IS_DEMO } from '@/lib/db';
 import { Logo } from '@/components/Logo';
 import { LoginForm } from './LoginForm';
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ as?: string }>;
-}) {
+export default async function LoginPage() {
   const user = await currentUser();
   if (user) redirect('/dashboard');
-
-  const { as } = await searchParams;
-  const door = as === 'volunteer' ? 'volunteer' : 'board';
 
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.08fr_1fr]">
@@ -101,7 +94,7 @@ export default async function LoginPage({
             </div>
           )}
 
-          <LoginForm door={door} />
+          <LoginForm />
         </div>
       </div>
     </main>

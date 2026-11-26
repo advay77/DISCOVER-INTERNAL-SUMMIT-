@@ -28,6 +28,11 @@ export default async function TasksPage({
     where.status = { not: 'done' };
     where.dueDate = { lt: new Date() };
   }
+  if (filter === 'week') {
+    const start = new Date();
+    where.status = { not: 'done' };
+    where.dueDate = { gte: start, lte: new Date(start.getTime() + 7 * 86400000) };
+  }
   if (filter === 'done') where.status = 'done';
   if (ws) where.workstreamId = ws;
 
@@ -66,6 +71,7 @@ export default async function TasksPage({
     { key: '', label: `All tasks ${tasks.length ? '' : ''}` },
     { key: 'mine', label: 'My tasks' },
     { key: 'overdue', label: 'Overdue' },
+    { key: 'week', label: 'Due this week' },
     { key: 'done', label: 'Completed' },
   ];
 

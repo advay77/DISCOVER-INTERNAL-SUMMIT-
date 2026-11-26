@@ -78,8 +78,13 @@ export function clientKey(headers: Headers, prefix: string) {
 }
 
 export const LIMITS = {
-  /** Sign-in attempts, per address and per account. */
+  /** Wrong passwords for one account. Stops guessing that person's password. */
   login: { limit: 8, windowMs: 10 * 60_000 },
+  /**
+   * Sign-in attempts from one network. A planning room shares an address, so
+   * this has to fit the whole room. Each account still has its own limit.
+   */
+  loginIp: { limit: 120, windowMs: 10 * 60_000 },
   /** Messages per person, so one tab cannot flood a channel. */
   message: { limit: 40, windowMs: 60_000 },
   /** Uploads per person. */

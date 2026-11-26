@@ -77,7 +77,7 @@ export const CAPABILITIES: CapabilityDef[] = [
   { key: 'retro:write', group: 'Retro', label: 'Add retro notes', help: 'Everyone who was there should be able to.', scopes: ['all', 'none'] },
 
   // Admin
-  { key: 'admin:users', group: 'Admin', label: 'Manage people', help: 'Invite, edit and deactivate members.', scopes: ['all', 'none'], sensitive: true },
+  { key: 'admin:users', group: 'Admin', label: 'Manage people', help: 'Deactivate members. New accounts are not created here.', scopes: ['all', 'none'], sensitive: true },
   { key: 'admin:roles', group: 'Admin', label: 'Assign roles', help: 'Move a member between roles.', scopes: ['all', 'none'], sensitive: true },
   { key: 'admin:permissions', group: 'Admin', label: 'Edit the permission matrix', help: 'The master switch. President only, and cannot be revoked from the President.', scopes: ['all', 'none'], sensitive: true },
   { key: 'admin:event', group: 'Admin', label: 'Edit event settings', help: 'Dates, theme, venue, goals and the annual playbook.', scopes: ['all', 'none'] },
