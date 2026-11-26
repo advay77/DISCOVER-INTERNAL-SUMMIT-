@@ -13,6 +13,7 @@ import { IconHash, IconLock } from '@/components/icons';
 import { CallButton } from '@/components/CallButton';
 import { callRoomFor } from '@/lib/realtime';
 import { relativeTime } from '@/lib/format';
+import { NewMessage } from '@/components/NewMessage';
 
 export default async function ChannelPage({ params }: { params: Promise<{ key: string }> }) {
   const user = await requireCan('chat:use');
@@ -26,7 +27,8 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
   const channel = memberships.find((m) => m.channel.key === key)?.channel;
   if (!channel) notFound();
 
-  const [unreadMap, members, memberCount, lastMessages] = await Promise.all([
+  const dmIds = memberships.filter((m) => m.channel.type === 'dm').map((m) => m.channelId);
+  const [unreadMap, members, memberCount, lastMessages, dmPartners] = await Promise.all([
     unreadByChannel(
       user.id,
       memberships.map((m) => ({ channelId: m.channelId, lastReadAt: m.lastReadAt })),
@@ -57,7 +59,20 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
             })
           : [],
       ),
+    // Who is on the other side of each direct message.
+    dmIds.length
+      ? db.channelMember.findMany({
+          where: { channelId: { in: dmIds }, userId: { not: user.id } },
+          select: { channelId: true, user: { select: { id: true, name: true, accent: true, title: true } } },
+        })
+      : [],
   ]);
+  const partner = new Map(dmPartners.map((d) => [d.channelId, d.user]));
+  /** A DM is named after the other person; everything else by its channel name. */
+  const label = (c: { id: string; name: string; type: string }) =>
+    c.type === 'dm' ? partner.get(c.id)?.name ?? 'Direct message' : c.name;
+  const isDm = channel.type === 'dm';
+  const other = isDm ? partner.get(channel.id) : undefined;
   const preview: Record<string, { text: string; at: Date } | undefined> = {};
   const lastByChannel = new Map(lastMessages.map((l) => [l.channelId, l]));
   memberships.forEach((m) => {
@@ -74,7 +89,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
     { title: 'Channels', list: memberships.filter((m) => m.channel.type === 'public'), addable: true },
     { title: 'Workstreams', list: memberships.filter((m) => m.channel.type === 'workstream') },
     { title: 'Private', list: memberships.filter((m) => m.channel.type === 'private') },
-    { title: 'Direct messages', list: memberships.filter((m) => m.channel.type === 'dm') },
+    { title: 'Direct messages', list: memberships.filter((m) => m.channel.type === 'dm'), addable: can(user, 'chat:dm') },
   ];
 
   const canCreate = can(user, 'chat:channel.create');
@@ -96,7 +111,8 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
                 <div key={g.title} className="mb-4">
                   <div className="mb-1 flex items-center justify-between pl-2 pr-1">
                     <p className="text-[11.5px] font-medium text-ink-faint">{g.title}</p>
-                    {g.addable && <NewChannel canCreate={canCreate} />}
+                    {g.addable &&
+                      (g.title === 'Direct messages' ? <NewMessage meId={user.id} /> : <NewChannel canCreate={canCreate} />)}
                   </div>
 
                   {g.list.map((m) => {
@@ -112,19 +128,25 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
                           active ? 'bg-navy text-white' : 'hover:bg-panel',
                         )}
                       >
-                        <span
-                          className={clsx(
-                            'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                            active ? 'bg-white/15' : 'bg-panel',
-                          )}
-                          style={!active && m.channel.workstream ? { boxShadow: `inset 0 0 0 2px ${m.channel.workstream.color}` } : undefined}
-                        >
-                          <Icon size={13} className={active ? 'opacity-80' : 'text-ink-muted'} />
-                        </span>
+                        {m.channel.type === 'dm' ? (
+                          <span className="mt-0.5 shrink-0">
+                            <Avatar name={label(m.channel)} accent={partner.get(m.channelId)?.accent ?? '#8F8F89'} size={32} />
+                          </span>
+                        ) : (
+                          <span
+                            className={clsx(
+                              'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                              active ? 'bg-white/15' : 'bg-panel',
+                            )}
+                            style={!active && m.channel.workstream ? { boxShadow: `inset 0 0 0 2px ${m.channel.workstream.color}` } : undefined}
+                          >
+                            <Icon size={13} className={active ? 'opacity-80' : 'text-ink-muted'} />
+                          </span>
+                        )}
                         <span className="min-w-0 flex-1">
                           <span className="flex items-baseline justify-between gap-2">
                             <span className={clsx('truncate text-[13.5px]', active || n > 0 ? 'font-semibold' : 'font-medium', !active && 'text-ink')}>
-                              {m.channel.name}
+                              {label(m.channel)}
                             </span>
                             {preview[m.channelId] && (
                               <span className={clsx('shrink-0 text-[10.5px]', active ? 'text-white/60' : 'text-ink-faint')}>
@@ -148,7 +170,9 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
                   })}
 
                   {g.list.length === 0 && g.addable && (
-                    <p className="px-2 py-1 text-[11.5px] text-ink-faint">None yet.</p>
+                    <p className="px-2 py-1 text-[11.5px] text-ink-faint">
+                      {g.title === 'Direct messages' ? 'Press + to message someone.' : 'None yet.'}
+                    </p>
                   )}
                 </div>
               ),
@@ -162,12 +186,14 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
 
         <ChannelSwitcher
           currentKey={key}
-          currentName={channel.name}
+          currentName={label(channel)}
           currentType={channel.type}
+          meId={user.id}
+          canDm={can(user, 'chat:dm')}
           channels={memberships.map((m) => ({
             id: m.channel.id,
             key: m.channel.key,
-            name: m.channel.name,
+            name: label(m.channel),
             type: m.channel.type,
             unread: unread[m.channel.id] ?? 0,
           }))}
@@ -177,7 +203,18 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
         <section className="card flex min-h-0 flex-col overflow-hidden">
           <header className="flex items-center justify-end gap-x-3 gap-y-2 border-b border-line px-4 py-2 sm:px-5 lg:justify-between lg:py-3">
             {/* On phones the channel switcher above already names the channel. */}
-            <div className="hidden min-w-0 lg:block">
+            {isDm ? (
+              <div className="hidden min-w-0 items-center gap-3 lg:flex">
+                <Avatar name={other?.name ?? 'Direct message'} accent={other?.accent ?? '#8F8F89'} size={36} />
+                <div className="min-w-0">
+                  <h1 className="truncate text-[17px] font-semibold text-ink">{other?.name ?? 'Direct message'}</h1>
+                  <p className="truncate text-[12.5px] text-ink-muted">
+                    {other?.title ? `${other.title} · ` : ''}Only the two of you can see this conversation.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="hidden min-w-0 lg:block">
               <h1 className="flex items-center gap-2 text-[17px] font-semibold text-ink">
                 {channel.type === 'private' ? (
                   <IconLock size={15} className="text-ink-faint" />
@@ -198,19 +235,25 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
               )}
             </div>
 
+            )}
+
             <div className="flex items-center gap-2 sm:gap-3">
               <CallButton channelId={channel.id} url={callRoomFor({ channelId: channel.id })} />
-              <div className="hidden -space-x-1.5 sm:flex">
-                {members.map((m) => (
-                  <Avatar key={m.id} name={m.user.name} accent={m.user.accent} size={24} ring />
-                ))}
-              </div>
-              <ChannelMembers
-                channelId={channel.id}
-                channelName={channel.name}
-                memberCount={memberCount}
-                canManage={canManage && channel.type !== 'workstream'}
-              />
+              {!isDm && (
+                <>
+                  <div className="hidden -space-x-1.5 sm:flex">
+                    {members.map((m) => (
+                      <Avatar key={m.id} name={m.user.name} accent={m.user.accent} size={24} ring />
+                    ))}
+                  </div>
+                  <ChannelMembers
+                    channelId={channel.id}
+                    channelName={channel.name}
+                    memberCount={memberCount}
+                    canManage={canManage && channel.type !== 'workstream'}
+                  />
+                </>
+              )}
             </div>
           </header>
 
@@ -219,12 +262,15 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
             meId={user.id}
             meName={user.name}
             meAccent={user.accent}
-            canModerate={canManage}
-            placeholder={`Message #${channel.name}`}
+            // A DM is private between two people: no admin moderation inside it.
+            canModerate={canManage && !isDm}
+            placeholder={isDm ? `Message ${other?.name ?? ''}` : `Message #${channel.name}`}
             emptyHint={
-              channel.purpose
-                ? `${channel.purpose} Nothing posted here yet.`
-                : 'Nothing posted here yet.'
+              isDm
+                ? `This is the start of your conversation with ${other?.name ?? 'them'}. Only the two of you can see it.`
+                : channel.purpose
+                  ? `${channel.purpose} Nothing posted here yet.`
+                  : 'Nothing posted here yet.'
             }
           />
         </section>

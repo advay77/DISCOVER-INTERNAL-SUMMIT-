@@ -119,7 +119,7 @@ export default async function SearchPage({
                 <span className="text-[11.5px] text-ink-faint">{relativeTime(m.createdAt)}</span>
               </div>
               <p className="text-[13px] text-ink-muted">{m.body}</p>
-              <p className="text-[11.5px] text-ink-faint">#{m.channel?.name}</p>
+              <p className="text-[11.5px] text-ink-faint">{m.channel?.type === 'dm' ? 'Direct message' : `#${m.channel?.name}`}</p>
             </Link>
           ))}
         </Card>

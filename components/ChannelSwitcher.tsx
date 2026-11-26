@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
-import { IconHash, IconLock } from './icons';
+import { IconHash, IconLock, IconChat } from './icons';
+import { NewMessage } from './NewMessage';
 
 type Row = { id: string; key: string; name: string; type: string; unread: number };
 
@@ -16,11 +17,15 @@ export function ChannelSwitcher({
   currentKey,
   currentName,
   currentType,
+  meId,
+  canDm = false,
 }: {
   channels: Row[];
   currentKey: string;
   currentName: string;
   currentType: string;
+  meId: string;
+  canDm?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -39,7 +44,9 @@ export function ChannelSwitcher({
         onClick={() => setOpen(true)}
         className="flex w-full items-center gap-2 rounded-xl border border-line-strong bg-white px-3 py-2 text-left"
       >
-        {currentType === 'private' ? (
+        {currentType === 'dm' ? (
+          <IconChat size={14} className="shrink-0 text-ink-faint" />
+        ) : currentType === 'private' ? (
           <IconLock size={14} className="shrink-0 text-ink-faint" />
         ) : (
           <IconHash size={14} className="shrink-0 text-ink-faint" />
@@ -64,6 +71,11 @@ export function ChannelSwitcher({
             </div>
 
             <div className="p-2">
+              {canDm && (
+                <div className="mb-2 border-b border-line pb-2">
+                  <NewMessage meId={meId} variant="row" />
+                </div>
+              )}
               {groups.map((g) =>
                 g.list.length === 0 ? null : (
                   <div key={g.title} className="mb-3">
@@ -72,7 +84,7 @@ export function ChannelSwitcher({
                     </p>
                     {g.list.map((c) => {
                       const active = c.key === currentKey;
-                      const Icon = c.type === 'private' ? IconLock : IconHash;
+                      const Icon = c.type === 'dm' ? IconChat : c.type === 'private' ? IconLock : IconHash;
                       return (
                         <button
                           key={c.id}

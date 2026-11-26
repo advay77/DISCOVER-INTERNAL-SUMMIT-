@@ -62,6 +62,10 @@ export async function POST(req: Request, { params }: Ctx) {
   const found = await load(user.id, id);
   if ('error' in found) return NextResponse.json({ error: found.error }, { status: found.status });
 
+  if (found.channel.type === 'dm') {
+    return NextResponse.json({ error: 'A direct message is between two people. Start a channel to include more.' }, { status: 400 });
+  }
+
   const { userIds } = await req.json();
   const ids = Array.isArray(userIds) ? userIds.map(String) : [];
   if (!ids.length) return NextResponse.json({ error: 'Pick at least one person.' }, { status: 400 });
@@ -102,6 +106,10 @@ export async function DELETE(req: Request, { params }: Ctx) {
   // Removing someone else needs the people permission; leaving never does.
   if (target !== user.id && !can(user, 'admin:users')) {
     return NextResponse.json({ error: 'Only the President or an officer can remove someone.' }, { status: 403 });
+  }
+
+  if (found.channel.type === 'dm') {
+    return NextResponse.json({ error: 'Direct messages cannot be left or changed.' }, { status: 400 });
   }
 
   // A workstream channel's membership follows the workstream, not this screen.

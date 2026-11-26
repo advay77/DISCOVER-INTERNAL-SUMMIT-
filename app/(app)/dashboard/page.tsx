@@ -50,7 +50,8 @@ export default async function Dashboard({
         select: { id: true, summary: true, createdAt: true, actor: { select: { name: true } } },
       }),
       db.message.findMany({
-        where: { channelId: { not: null }, deletedAt: null },
+        // Only conversations the viewer is in — private channels and DMs stay private.
+        where: { deletedAt: null, channel: { members: { some: { userId: user.id } } } },
         orderBy: { createdAt: 'desc' },
         take: 4,
         select: {
