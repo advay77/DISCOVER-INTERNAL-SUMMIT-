@@ -1,0 +1,22 @@
+---
+description: Commit messages stay clear and never mention Cursor
+alwaysApply: true
+---
+
+# Commits
+
+Only commit when the user asks. The subject says what changed and why, in plain language, one or two sentences.
+
+Never add Cursor to a commit. That includes `Made with Cursor`, `Co-authored-by: Cursor`, and any Cursor trailer.
+
+```
+# Bad
+fix navbar
+
+Co-authored-by: Cursor <cursoragent@cursor.com>
+
+# Good
+Move the account menu to the right and open notifications from the bell.
+
+The bell was sending people into Messages, and the name sat beside the search.
+```

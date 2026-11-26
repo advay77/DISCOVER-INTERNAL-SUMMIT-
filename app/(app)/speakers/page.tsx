@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireCan, scopeOf, scopeFilter, redactMany, SPEAKER_GATES } from '@/lib/authz';
+import { requireCan, scopeOf, scopeFilter, restrictionFilter, redactMany, SPEAKER_GATES } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { PageHeader, Card, Pill, StatusPill, Avatar, StatTile, Empty } from '@/components/ui';
 import { IconSpeaker, IconCheck, IconRetro, IconAlert, IconChat } from '@/components/icons';
@@ -18,16 +18,26 @@ export default async function SpeakersPage({
   const where: any = scopeFilter(user, 'speakers:view');
   if (status) where.status = status;
 
-  const rows = await db.speaker.findMany({
-    where,
-    orderBy: [{ confirmed: 'desc' }, { priority: 'asc' }, { name: 'asc' }],
-    include: { owner: true },
-  });
+  // Summary tiles count the whole pipeline. A status chip narrows the table
+  // only, so those two reads run together when they are not the same set.
+  const statsAreWholeTable = scope === 'all' && (!!status || !!restrictionFilter(user));
+  const [rows, statRows] = await Promise.all([
+    db.speaker.findMany({
+      where,
+      orderBy: [{ confirmed: 'desc' }, { priority: 'asc' }, { name: 'asc' }],
+      include: { owner: { select: { id: true, name: true, accent: true } } },
+    }),
+    statsAreWholeTable
+      ? db.speaker.findMany({
+          select: { status: true, confirmed: true, prepCallNeeded: true, bio: true, headshot: true },
+        })
+      : Promise.resolve(null),
+  ]);
 
   // Contact details are removed from the payload here — not hidden in the UI.
   const speakers = redactMany(user, rows as any[], SPEAKER_GATES as any);
 
-  const all = await db.speaker.findMany({ where: scope === 'all' ? {} : where, select: { status: true, confirmed: true, prepCallNeeded: true, bio: true, headshot: true } });
+  const all = statRows ?? rows;
   const invited = all.filter((s) => s.status !== 'Identified').length;
   const confirmed = all.filter((s) => s.confirmed).length;
   const followUp = all.filter((s) => s.status === 'Responded' || s.prepCallNeeded).length;

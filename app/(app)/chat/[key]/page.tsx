@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import clsx from 'clsx';
 import { requireCan, can } from '@/lib/authz';
 import { db } from '@/lib/db';
+import { unreadByChannel } from '@/lib/unread';
 import { Thread } from '@/components/Thread';
 import { Avatar } from '@/components/ui';
 import { NewChannel, ChannelMembers } from '@/components/ChannelAdmin';
@@ -22,25 +23,21 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
   const channel = memberships.find((m) => m.channel.key === key)?.channel;
   if (!channel) notFound();
 
+  const [unreadMap, members, memberCount] = await Promise.all([
+    unreadByChannel(
+      user.id,
+      memberships.map((m) => ({ channelId: m.channelId, lastReadAt: m.lastReadAt })),
+    ),
+    db.channelMember.findMany({
+      where: { channelId: channel.id },
+      select: { id: true, user: { select: { name: true, accent: true } } },
+      orderBy: { user: { name: 'asc' } },
+      take: 6,
+    }),
+    db.channelMember.count({ where: { channelId: channel.id } }),
+  ]);
   const unread: Record<string, number> = {};
-  for (const m of memberships) {
-    unread[m.channel.id] = await db.message.count({
-      where: {
-        channelId: m.channel.id,
-        createdAt: { gt: m.lastReadAt },
-        authorId: { not: user.id },
-        deletedAt: null,
-      },
-    });
-  }
-
-  const members = await db.channelMember.findMany({
-    where: { channelId: channel.id },
-    include: { user: true },
-    orderBy: { user: { name: 'asc' } },
-    take: 6,
-  });
-  const memberCount = await db.channelMember.count({ where: { channelId: channel.id } });
+  for (const [id, n] of unreadMap) unread[id] = n;
 
   const groups: { title: string; list: typeof memberships; addable?: boolean }[] = [
     { title: 'Channels', list: memberships.filter((m) => m.channel.type === 'public'), addable: true },

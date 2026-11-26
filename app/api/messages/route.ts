@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { currentUser } from '@/lib/auth';
 import { can } from '@/lib/authz';
 import { rateLimit, clientKey, LIMITS as RATE } from '@/lib/ratelimit';
+import { channelNeedsReadReceipt } from '@/lib/unread';
 import { text, idList, LIMITS as BOUND } from '@/lib/validate';
 
 /**
@@ -48,10 +49,12 @@ export async function GET(req: Request) {
       },
     });
 
-    await db.channelMember.update({
-      where: { channelId_userId: { channelId, userId: user.id } },
-      data: { lastReadAt: new Date() },
-    });
+    if (channelNeedsReadReceipt(messages, member.lastReadAt, user.id)) {
+      await db.channelMember.update({
+        where: { channelId_userId: { channelId, userId: user.id } },
+        data: { lastReadAt: new Date() },
+      });
+    }
 
     return NextResponse.json({ messages });
   }
@@ -75,6 +78,40 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({ error: 'channelId or entity required' }, { status: 400 });
+}
+
+function entityLink(entityType: string | null, entityId: string | null) {
+  if (!entityType || !entityId) return null;
+  if (entityType === 'task') return `/tasks/${entityId}`;
+  if (entityType === 'speaker') return `/speakers/${entityId}`;
+  if (entityType === 'event') return `/events/${entityId}`;
+  if (entityType === 'question') return '/questions';
+  if (entityType === 'sponsor') return '/sponsors';
+  if (entityType === 'vendor') return '/logistics';
+  if (entityType === 'session') return '/agenda';
+  return null;
+}
+
+async function notificationLink(channelId: string | null, entityType: string | null, entityId: string | null) {
+  if (channelId) {
+    const channel = await db.channel.findUnique({ where: { id: channelId }, select: { key: true } });
+    if (channel) return `/chat/${channel.key}`;
+  }
+  return entityLink(entityType, entityId);
+}
+
+async function entityOwnerId(entityType: string, entityId: string) {
+  const query = { where: { id: entityId }, select: { ownerId: true } } as const;
+  const row =
+    entityType === 'task' ? await db.task.findUnique(query)
+    : entityType === 'speaker' ? await db.speaker.findUnique(query)
+    : entityType === 'sponsor' ? await db.sponsor.findUnique(query)
+    : entityType === 'vendor' ? await db.vendor.findUnique(query)
+    : entityType === 'question' ? await db.openQuestion.findUnique(query)
+    : entityType === 'session' ? await db.session.findUnique(query)
+    : entityType === 'event' ? await db.event.findUnique(query)
+    : null;
+  return row?.ownerId ?? null;
 }
 
 export async function POST(req: Request) {
@@ -150,17 +187,55 @@ export async function POST(req: Request) {
     });
   }
 
-  if (mentioned.length) {
+  const mentionLink = await notificationLink(channelId, entityType, entityId);
+  const mentionedIds = new Set(mentioned.filter((m) => m.id !== user.id).map((m) => m.id));
+  if (mentionedIds.size) {
     await db.notification.createMany({
-      data: mentioned
-        .filter((m) => m.id !== user.id)
-        .map((m) => ({
-          userId: m.id,
-          kind: 'mention',
-          text: `${user.name} mentioned you`,
-          link: channelId ? `/chat` : `/${entityType}s/${entityId}`,
-        })),
+      data: Array.from(mentionedIds).map((id) => ({
+        userId: id,
+        kind: 'mention',
+        text: `${user.name} mentioned you`,
+        link: mentionLink,
+      })),
     });
+  }
+
+  if (channelId) {
+    const channel = await db.channel.findUnique({
+      where: { id: channelId },
+      select: { key: true, name: true },
+    });
+    const members = await db.channelMember.findMany({
+      where: { channelId, userId: { not: user.id } },
+      select: { userId: true },
+    });
+    const preview = messageText.replace(/\s+/g, ' ').trim().slice(0, 140);
+    const note = preview
+      ? `${user.name} in #${channel?.name ?? 'channel'}: ${preview}`
+      : `${user.name} sent a file in #${channel?.name ?? 'channel'}`;
+    const recipients = members.filter((m) => !mentionedIds.has(m.userId));
+    if (recipients.length && channel) {
+      await db.notification.createMany({
+        data: recipients.map((m) => ({
+          userId: m.userId,
+          kind: 'message',
+          text: note,
+          link: `/chat/${channel.key}`,
+        })),
+      });
+    }
+  } else if (entityType && entityId) {
+    const ownerId = await entityOwnerId(entityType, entityId);
+    if (ownerId && ownerId !== user.id && !mentionedIds.has(ownerId)) {
+      await db.notification.create({
+        data: {
+          userId: ownerId,
+          kind: 'update',
+          text: `${user.name} left an update`,
+          link: mentionLink,
+        },
+      });
+    }
   }
 
   if (channelId) {

@@ -22,6 +22,14 @@ async function log(actorId: string, verb: string, entityType: string, summary: s
   await db.activityLog.create({ data: { actorId, verb, entityType, entityId, summary } });
 }
 
+/** A bell item for someone other than the person who just made the change. */
+async function notify(userId: string | null | undefined, actorId: string, text: string, link: string) {
+  if (!userId || userId === actorId) return;
+  await db.notification.create({
+    data: { userId, kind: 'update', text, link },
+  });
+}
+
 /* ------------------------------------------------------------------ tasks */
 
 export async function setTaskStatus(taskId: string, status: string) {
@@ -37,6 +45,7 @@ export async function setTaskStatus(taskId: string, status: string) {
     data: { status: next, completedAt: next === 'done' ? new Date() : null },
   });
   await log(user.id, next === 'done' ? 'completed' : 'moved', 'task', `${task.title} → ${next.replace('_', ' ')}`, taskId);
+  await notify(task.ownerId, user.id, `${user.name} updated ${task.title}`, `/tasks/${taskId}`);
   revalidatePath('/tasks');
   revalidatePath('/dashboard');
   return { ok: true };
@@ -59,6 +68,11 @@ export async function updateTask(taskId: string, data: FormData) {
   if (ownerId && can(user, 'tasks:assign')) patch.ownerId = ownerId;
 
   await db.task.update({ where: { id: taskId }, data: patch });
+  if (patch.ownerId && patch.ownerId !== task.ownerId) {
+    await notify(patch.ownerId, user.id, `${user.name} assigned ${patch.title} to you`, `/tasks/${taskId}`);
+  } else {
+    await notify(patch.ownerId ?? task.ownerId, user.id, `${user.name} updated ${task.title}`, `/tasks/${taskId}`);
+  }
   revalidatePath(`/tasks/${taskId}`);
   revalidatePath('/tasks');
   return { ok: true };
@@ -87,6 +101,7 @@ export async function createTask(data: FormData) {
     },
   });
   await log(user.id, 'created', 'task', title, task.id);
+  await notify(task.ownerId, user.id, `${user.name} assigned ${title} to you`, `/tasks/${task.id}`);
   revalidatePath('/tasks');
   return { ok: true, id: task.id };
 }
@@ -161,6 +176,7 @@ export async function updateSpeaker(id: string, data: FormData) {
     },
   });
   await log(user.id, 'updated', 'speaker', `${speaker.name} → ${status}`, id);
+  await notify(speaker.ownerId, user.id, `${user.name} updated ${speaker.name}`, `/speakers/${id}`);
   revalidatePath('/speakers');
   revalidatePath(`/speakers/${id}`);
   return { ok: true };
@@ -181,6 +197,7 @@ export async function updateQuestion(id: string, data: FormData) {
       update: optionalText(data.get('update'), BOUND.notes),
     },
   });
+  await notify(q.ownerId, user.id, `${user.name} updated a question`, '/questions');
   revalidatePath('/questions');
   return { ok: true };
 }
@@ -192,7 +209,7 @@ export async function createQuestion(data: FormData) {
   const question = text(data.get('question'), BOUND.shortText);
   if (!question) return { error: 'Write the question first.' };
 
-  await db.openQuestion.create({
+  const createdQuestion = await db.openQuestion.create({
     data: {
       question,
       update: optionalText(data.get('update'), BOUND.notes),
@@ -201,6 +218,7 @@ export async function createQuestion(data: FormData) {
       eventId: event?.id,
     },
   });
+  await notify(createdQuestion.ownerId, user.id, `${user.name} raised a question for you`, '/questions');
   revalidatePath('/questions');
   return { ok: true };
 }
@@ -348,9 +366,12 @@ export async function inviteUser(data: FormData) {
     // Join the matching workstream channels.
     const channels = await db.channel.findMany({ where: { workstreamId: { in: workstreamIdsRaw } } });
     const publics = await db.channel.findMany({ where: { type: 'public' } });
-    await db.channelMember.createMany({
-      data: [...channels, ...publics].map((c) => ({ channelId: c.id, userId: created.id })),
-    });
+    const joined = [...channels, ...publics];
+    if (joined.length) {
+      await db.channelMember.createMany({
+        data: joined.map((c) => ({ channelId: c.id, userId: created.id })),
+      });
+    }
   }
 
   await db.auditLog.create({
@@ -358,6 +379,26 @@ export async function inviteUser(data: FormData) {
   });
   revalidatePath('/admin');
   return { ok: true, tempPassword: temp };
+}
+
+export async function updateProfile(data: FormData) {
+  const user = await requireUser();
+  const name = text(data.get('name'), BOUND.name);
+  if (!name) return { error: 'Your profile needs a name.' };
+
+  await db.user.update({
+    where: { id: user.id },
+    data: {
+      name,
+      title: optionalText(data.get('title'), BOUND.title),
+      company: optionalText(data.get('company'), BOUND.name),
+      phone: optionalText(data.get('phone'), 40),
+    },
+  });
+  revalidatePath('/profile');
+  revalidatePath('/team');
+  revalidatePath('/admin');
+  return { ok: true };
 }
 
 export async function updateEvent(data: FormData) {

@@ -7,85 +7,128 @@ import { dateRange, daysUntil, dueLabel, pct, relativeTime, shortDate } from '@/
 
 export default async function Dashboard() {
   const user = await requireUser();
-  const event = await db.event.findFirst({ where: { isCurrent: true } });
 
   const scope = scopeOf(user, 'tasks:view');
   const taskWhere: any = scopeFilter(user, 'tasks:view');
 
   const now = new Date();
+  const weekEnd = new Date(now.getTime() + 7 * 86400000);
+  const seeSpeakers = can(user, 'speakers:view');
+  const seeSponsors = can(user, 'sponsors:view');
+  const seeVendors = can(user, 'vendors:view');
+  const seeAttendees = can(user, 'attendees:view');
+  const seeQuestions = can(user, 'questions:view');
 
-  const [tasks, myTasks, upcoming, activity, recentMessages] = await Promise.all([
-    db.task.findMany({ where: taskWhere, select: { status: true, dueDate: true } }),
+  const [
+    event,
+    total,
+    done,
+    overdue,
+    dueWeek,
+    myTasks,
+    upcoming,
+    activity,
+    recentMessages,
+    upcomingEvents,
+    speakerTotal,
+    speakerConfirmed,
+    sponsorTotal,
+    sponsorConfirmed,
+    vendorTotal,
+    vendorSettled,
+    attendeeCount,
+    openQuestions,
+  ] = await Promise.all([
+    db.event.findFirst({ where: { isCurrent: true } }),
+    db.task.count({ where: taskWhere }),
+    db.task.count({ where: { AND: [taskWhere, { status: 'done' }] } }),
+    db.task.count({
+      where: { AND: [taskWhere, { status: { not: 'done' }, dueDate: { lt: now } }] },
+    }),
+    db.task.count({
+      where: {
+        AND: [taskWhere, { status: { not: 'done' }, dueDate: { gte: now, lte: weekEnd } }],
+      },
+    }),
     db.task.findMany({
       where: { ownerId: user.id, status: { not: 'done' } },
       orderBy: [{ dueDate: 'asc' }],
       take: 6,
-      include: { workstream: true },
+      select: {
+        id: true,
+        title: true,
+        category: true,
+        status: true,
+        dueDate: true,
+        workstream: { select: { color: true } },
+      },
     }),
     db.task.findMany({
       where: { ...taskWhere, status: { not: 'done' }, dueDate: { not: null } },
       orderBy: { dueDate: 'asc' },
       take: 5,
-      include: { owner: true },
+      select: { id: true, title: true, dueDate: true, owner: { select: { name: true } } },
     }),
-    db.activityLog.findMany({ orderBy: { createdAt: 'desc' }, take: 5, include: { actor: true } }),
+    db.activityLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: { id: true, summary: true, createdAt: true, actor: { select: { name: true } } },
+    }),
     db.message.findMany({
       where: { channelId: { not: null }, deletedAt: null },
       orderBy: { createdAt: 'desc' },
       take: 4,
-      include: { author: true, channel: true },
+      select: {
+        id: true,
+        body: true,
+        createdAt: true,
+        author: { select: { name: true, accent: true } },
+        channel: { select: { key: true, name: true } },
+      },
     }),
+    db.event.findMany({
+      where: {
+        endDate: { gte: now },
+        status: { not: 'cancelled' },
+        ...(scopeOf(user, 'finance:view') === 'none'
+          ? { OR: [{ workstreamId: null }, { workstream: { is: { restricted: false } } }] }
+          : {}),
+      },
+      orderBy: { startDate: 'asc' },
+      take: 4,
+      select: {
+        id: true,
+        name: true,
+        startDate: true,
+        venue: true,
+        kind: true,
+        workstream: { select: { name: true } },
+      },
+    }),
+    seeSpeakers ? db.speaker.count() : 0,
+    seeSpeakers ? db.speaker.count({ where: { confirmed: true } }) : 0,
+    seeSponsors ? db.sponsor.count() : 0,
+    seeSponsors ? db.sponsor.count({ where: { status: 'Confirmed' } }) : 0,
+    seeVendors ? db.vendor.count() : 0,
+    seeVendors
+      ? db.vendor.count({ where: { paymentStatus: { in: ['Paid', 'Deposit paid'] } } })
+      : 0,
+    seeAttendees ? db.attendee.count({ where: { status: 'Confirmed' } }) : 0,
+    seeQuestions
+      ? db.openQuestion.findMany({
+          where: { AND: [scopeFilter(user, 'questions:view'), { status: { not: 'Answered' } }] },
+          orderBy: { updatedAt: 'desc' },
+          take: 4,
+          select: {
+            id: true,
+            question: true,
+            status: true,
+            update: true,
+            owner: { select: { name: true } },
+          },
+        })
+      : [],
   ]);
-
-  // Everything DISCOVER runs next, not only the summit.
-  const upcomingEvents = await db.event.findMany({
-    where: {
-      endDate: { gte: now },
-      status: { not: 'cancelled' },
-      ...(scopeOf(user, 'finance:view') === 'none'
-        ? { OR: [{ workstreamId: null }, { workstream: { is: { restricted: false } } }] }
-        : {}),
-    },
-    orderBy: { startDate: 'asc' },
-    take: 4,
-    include: { owner: true, workstream: true },
-  });
-
-  const total = tasks.length;
-  const done = tasks.filter((t) => t.status === 'done').length;
-  const overdue = tasks.filter((t) => t.status !== 'done' && t.dueDate && t.dueDate < now).length;
-  const weekEnd = new Date(now.getTime() + 7 * 86400000);
-  const dueWeek = tasks.filter(
-    (t) => t.status !== 'done' && t.dueDate && t.dueDate >= now && t.dueDate <= weekEnd,
-  ).length;
-
-  const [speakerTotal, speakerConfirmed] = can(user, 'speakers:view')
-    ? await Promise.all([db.speaker.count(), db.speaker.count({ where: { confirmed: true } })])
-    : [0, 0];
-
-  const [sponsorTotal, sponsorConfirmed] = can(user, 'sponsors:view')
-    ? await Promise.all([db.sponsor.count(), db.sponsor.count({ where: { status: 'Confirmed' } })])
-    : [0, 0];
-
-  const [vendorTotal, vendorSettled] = can(user, 'vendors:view')
-    ? await Promise.all([
-        db.vendor.count(),
-        db.vendor.count({ where: { paymentStatus: { in: ['Paid', 'Deposit paid'] } } }),
-      ])
-    : [0, 0];
-
-  const attendeeCount = can(user, 'attendees:view')
-    ? await db.attendee.count({ where: { status: 'Confirmed' } })
-    : 0;
-
-  const openQuestions = can(user, 'questions:view')
-    ? await db.openQuestion.findMany({
-        where: { AND: [scopeFilter(user, 'questions:view'), { status: { not: 'Answered' } }] },
-        orderBy: { updatedAt: 'desc' },
-        take: 4,
-        include: { owner: true },
-      })
-    : [];
 
   const countdown = event ? daysUntil(event.startDate) : 0;
   const progress = pct(done, total);

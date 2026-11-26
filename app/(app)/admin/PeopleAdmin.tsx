@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Avatar, Pill } from '@/components/ui';
 import { setUserRole, setUserActive, inviteUser } from '@/app/actions';
@@ -81,7 +82,9 @@ export function PeopleAdmin({
                 <span className="flex items-center gap-3">
                   <Avatar name={p.name} accent={p.accent} size={32} />
                   <span>
-                    <span className="block text-[13.5px] font-medium text-ink">{p.name}</span>
+                    <Link href={`/profile/${p.id}`} className="block text-[13.5px] font-medium text-ink hover:text-brand">
+                      {p.name}
+                    </Link>
                     <span className="block text-[12px] text-ink-faint">
                       {p.title ?? p.email}
                       {p.company ? ` · ${p.company}` : ''}

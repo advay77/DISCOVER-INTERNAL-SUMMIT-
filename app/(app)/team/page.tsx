@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { requireCan, can, visibleWorkstreams } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { PageHeader, Card, Avatar, Pill } from '@/components/ui';
@@ -20,6 +21,8 @@ export default async function TeamPage() {
   ]);
 
   const board = people.filter((p) => ['president', 'officer', 'director'].includes(p.role.key));
+  const isAdmin = can(user, 'admin:users');
+  const profileHref = (id: string) => (isAdmin || id === user.id ? `/profile/${id}` : null);
 
   return (
     <div className="mx-auto max-w-[1180px]">
@@ -31,7 +34,13 @@ export default async function TeamPage() {
             <div key={p.id} className="flex items-start gap-3 rounded-lg border border-line p-4">
               <Avatar name={p.name} accent={p.accent} size={40} />
               <div className="min-w-0">
-                <p className="text-[14px] font-semibold text-ink">{p.name}</p>
+                {profileHref(p.id) ? (
+                  <Link href={profileHref(p.id)!} className="text-[14px] font-semibold text-ink hover:text-brand">
+                    {p.name}
+                  </Link>
+                ) : (
+                  <p className="text-[14px] font-semibold text-ink">{p.name}</p>
+                )}
                 <p className="text-[12.5px] text-ink-muted">{p.title}</p>
                 <p className="text-[12px] text-ink-faint">{p.company}</p>
                 {showContact && <p className="mt-1 text-[12px] text-ink-faint">{p.email}</p>}
@@ -62,7 +71,13 @@ export default async function TeamPage() {
               <div className="mb-3 flex items-center gap-2.5 rounded-lg bg-paper px-3 py-2">
                 <Avatar name={w.lead.name} accent={w.lead.accent} size={28} />
                 <div>
-                  <p className="text-[13.5px] font-semibold text-ink">{w.lead.name}</p>
+                  {profileHref(w.lead.id) ? (
+                    <Link href={profileHref(w.lead.id)!} className="text-[13.5px] font-semibold text-ink hover:text-brand">
+                      {w.lead.name}
+                    </Link>
+                  ) : (
+                    <p className="text-[13.5px] font-semibold text-ink">{w.lead.name}</p>
+                  )}
                   <p className="text-[11.5px] text-ink-faint">Lead</p>
                 </div>
               </div>
@@ -71,13 +86,22 @@ export default async function TeamPage() {
             <div className="space-y-1.5">
               {w.members
                 .filter((m) => m.userId !== w.leadId)
-                .map((m) => (
-                  <div key={m.id} className="flex items-center gap-2.5">
-                    <Avatar name={m.user.name} accent={m.user.accent} size={24} />
-                    <span className="text-[13px] text-ink">{m.user.name}</span>
-                    <span className="text-[11.5px] text-ink-faint">{m.user.role.name}</span>
-                  </div>
-                ))}
+                .map((m) => {
+                  const href = profileHref(m.userId);
+                  return (
+                    <div key={m.id} className="flex items-center gap-2.5">
+                      <Avatar name={m.user.name} accent={m.user.accent} size={24} />
+                      {href ? (
+                        <Link href={href} className="text-[13px] text-ink hover:text-brand">
+                          {m.user.name}
+                        </Link>
+                      ) : (
+                        <span className="text-[13px] text-ink">{m.user.name}</span>
+                      )}
+                      <span className="text-[11.5px] text-ink-faint">{m.user.role.name}</span>
+                    </div>
+                  );
+                })}
               {w.members.length === 0 && <p className="text-[13px] text-ink-faint">No members yet.</p>}
             </div>
           </Card>

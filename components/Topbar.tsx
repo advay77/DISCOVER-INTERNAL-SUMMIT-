@@ -5,18 +5,21 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Avatar } from './ui';
 import { Logo } from './Logo';
-import { IconSearch, IconBell, IconAdmin, IconTeam, IconChat } from './icons';
+import { NotificationBell } from './NotificationBell';
+import { IconSearch, IconAdmin, IconTeam, IconChat } from './icons';
 import type { NavEntry } from './Sidebar';
 
 export function Topbar({
   user,
   unread,
+  notices,
   roleName,
   canAdmin,
   nav,
 }: {
   user: { name: string; email: string; accent: string; title?: string | null; company?: string | null };
   unread: number;
+  notices: number;
   roleName: string;
   canAdmin: boolean;
   nav: NavEntry[];
@@ -38,7 +41,7 @@ export function Topbar({
         </span>
       )}
 
-      <form action="/search" className="relative hidden max-w-sm flex-1 lg:block">
+      <form action="/search" className="relative hidden min-w-0 max-w-sm flex-1 lg:block">
         <IconSearch
           size={15}
           className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-faint"
@@ -51,8 +54,7 @@ export function Topbar({
         />
       </form>
 
-      <div className="flex-1 lg:hidden" />
-
+      <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
       <Link
         href="/search"
         className="flex h-10 w-10 items-center justify-center rounded-full text-ink-muted hover:bg-paper lg:hidden"
@@ -61,16 +63,7 @@ export function Topbar({
         <IconSearch size={19} />
       </Link>
 
-      <Link
-        href="/chat"
-        className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink-muted hover:bg-paper hover:text-ink lg:h-8 lg:w-8 lg:rounded-[4px]"
-        aria-label={unread > 0 ? `${unread} unread messages` : 'Messages'}
-      >
-        <IconBell size={17} />
-        {unread > 0 && (
-          <span className="absolute right-0.5 top-0.5 h-[7px] w-[7px] rounded-full bg-brick ring-2 ring-white" />
-        )}
-      </Link>
+      <NotificationBell initialCount={notices} />
 
       <div className="relative">
         <button
@@ -114,6 +107,14 @@ export function Topbar({
                   </Link>
                 )}
                 <Link
+                  href="/profile"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-paper"
+                >
+                  <IconTeam size={15} className="text-ink-faint" />
+                  Your profile
+                </Link>
+                <Link
                   href="/team"
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-paper"
@@ -144,6 +145,7 @@ export function Topbar({
             </div>
           </>
         )}
+      </div>
       </div>
     </header>
   );

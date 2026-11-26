@@ -15,15 +15,29 @@ export default async function FilesPage({
   const user = await requireCan('files:view');
   const { folder } = await searchParams;
 
-  const files = await db.fileAsset.findMany({
-    where: folder ? { folder, status: 'ready' } : { status: 'ready' },
-    orderBy: { createdAt: 'desc' },
-    include: { uploader: true },
-    take: 200,
-  });
+  const [files, grouped] = await Promise.all([
+    db.fileAsset.findMany({
+      where: folder ? { folder, status: 'ready' } : { status: 'ready' },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: {
+        id: true,
+        name: true,
+        folder: true,
+        size: true,
+        createdAt: true,
+        uploader: { select: { name: true } },
+      },
+    }),
+    db.fileAsset.groupBy({
+      by: ['folder'],
+      where: { status: 'ready', folder: { in: FOLDERS } },
+      _count: { _all: true },
+    }),
+  ]);
 
-  const counts: Record<string, number> = {};
-  for (const f of FOLDERS) counts[f] = await db.fileAsset.count({ where: { folder: f, status: 'ready' } });
+  const counts: Record<string, number> = Object.fromEntries(FOLDERS.map((f) => [f, 0]));
+  for (const row of grouped) counts[row.folder] = row._count._all;
 
   return (
     <div className="mx-auto max-w-[1180px]">

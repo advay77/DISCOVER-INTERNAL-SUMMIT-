@@ -1,5 +1,6 @@
 import { requireUser, can, scopeFilter } from '@/lib/authz';
 import { db } from '@/lib/db';
+import { countUnread } from '@/lib/unread';
 import { Sidebar, type NavEntry } from '@/components/Sidebar';
 import { MobileTabBar } from '@/components/MobileTabBar';
 import { Topbar } from '@/components/Topbar';
@@ -7,14 +8,18 @@ import { dateRange } from '@/lib/format';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const event = await db.event.findFirst({ where: { isCurrent: true } });
 
   // Open task count, scoped exactly the way the Tasks page scopes it.
   const taskWhere: any = scopeFilter(user, 'tasks:view');
 
-  const [openTasks, unread] = await Promise.all([
+  const [event, openTasks, unread, notices] = await Promise.all([
+    db.event.findFirst({
+      where: { isCurrent: true },
+      select: { name: true, startDate: true, endDate: true, city: true },
+    }),
     db.task.count({ where: { ...taskWhere, status: { not: 'done' } } }),
     countUnread(user.id),
+    db.notification.count({ where: { userId: user.id, readAt: null } }),
   ]);
 
   const nav: NavEntry[] = [
@@ -73,6 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             company: user.company,
           }}
           unread={unread}
+          notices={notices}
           roleName={user.role.name}
           canAdmin={can(user, 'admin:users') || can(user, 'admin:permissions') || can(user, 'admin:event')}
           nav={nav}
@@ -85,21 +91,4 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
     </div>
   );
-}
-
-async function countUnread(userId: string) {
-  const memberships = await db.channelMember.findMany({ where: { userId } });
-  if (!memberships.length) return 0;
-  let total = 0;
-  for (const m of memberships) {
-    total += await db.message.count({
-      where: {
-        channelId: m.channelId,
-        createdAt: { gt: m.lastReadAt },
-        authorId: { not: userId },
-        deletedAt: null,
-      },
-    });
-  }
-  return total;
 }

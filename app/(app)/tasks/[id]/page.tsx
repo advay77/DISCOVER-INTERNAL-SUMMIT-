@@ -20,7 +20,11 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
 
   const editable = allows(user, 'tasks:edit', task);
   const people = can(user, 'tasks:assign')
-    ? await db.user.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } })
+    ? await db.user.findMany({
+        where: { isActive: true },
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true },
+      })
     : [];
 
   const due = dueLabel(task.dueDate);

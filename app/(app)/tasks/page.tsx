@@ -35,11 +35,28 @@ export default async function TasksPage({
     db.task.findMany({
       where,
       orderBy: [{ status: 'asc' }, { dueDate: 'asc' }],
-      include: { owner: true, workstream: true },
       take: 400,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        category: true,
+        priority: true,
+        dueDate: true,
+        owner: { select: { name: true, accent: true } },
+        workstream: { select: { name: true, color: true } },
+      },
     }),
-    db.workstream.findMany({ where: visibleWorkstreams(user), orderBy: { order: 'asc' } }),
-    db.user.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
+    db.workstream.findMany({
+      where: visibleWorkstreams(user),
+      orderBy: { order: 'asc' },
+      select: { id: true, name: true, color: true },
+    }),
+    db.user.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true },
+    }),
   ]);
 
   const counts = Object.fromEntries(COLUMNS.map((c) => [c.key, tasks.filter((t) => t.status === c.key).length]));

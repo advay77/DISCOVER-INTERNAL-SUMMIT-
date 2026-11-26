@@ -10,7 +10,7 @@ type Person = { id: string; name: string; accent: string; role: string; company:
 
 /* ------------------------------------------------------------ create */
 
-export function NewChannel({ canCreate }: { canCreate: boolean }) {
+export function NewChannel({ canCreate, variant = 'icon' }: { canCreate: boolean; variant?: 'icon' | 'button' }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [purpose, setPurpose] = useState('');
@@ -69,11 +69,15 @@ export function NewChannel({ canCreate }: { canCreate: boolean }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded-[3px] p-0.5 text-ink-faint transition hover:bg-line hover:text-ink"
+        className={
+          variant === 'button'
+            ? 'btn-primary'
+            : 'rounded-[3px] p-0.5 text-ink-faint transition hover:bg-line hover:text-ink'
+        }
         title="Create a channel"
         aria-label="Create a channel"
       >
-        <IconPlus size={14} />
+        {variant === 'button' ? 'New channel' : <IconPlus size={14} />}
       </button>
 
       {open && (
