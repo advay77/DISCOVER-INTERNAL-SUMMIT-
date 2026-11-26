@@ -29,11 +29,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(can(user, 'tasks:view')
       ? [{ href: '/tasks', label: 'Tasks', icon: 'tasks' as const, badge: openTasks, group: '' }]
       : []),
-    ...(can(user, 'questions:view')
-      ? [{ href: '/questions', label: 'Questions', icon: 'questions' as const, group: '' }]
-      : []),
     { href: '/events', label: 'Events', icon: 'agenda', group: '' },
 
+    { href: '/summit', label: 'Summary', icon: 'summary', group: 'Annual Summit' },
     ...(can(user, 'speakers:view')
       ? [{ href: '/speakers', label: 'Speakers', icon: 'speakers' as const, group: 'Annual Summit' }]
       : []),

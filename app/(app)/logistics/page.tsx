@@ -21,7 +21,7 @@ export default async function LogisticsPage() {
   const committed = canSeeMoney ? rows.reduce((s, v) => s + (v.amount ?? 0), 0) : null;
 
   return (
-    <div className="mx-auto max-w-[1180px]">
+    <div className="mx-auto max-w-[1440px]">
       <PageHeader title="Logistics" subtitle="Venue, vendors and everything that has to be in the room on the day." />
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
@@ -47,7 +47,7 @@ export default async function LogisticsPage() {
         </Card>
         <Card title="Room block">
           <p className="text-[13.5px] text-ink-muted">
-            The 2026 cycle lost its block to a missed deadline. Track the extension on the Open Questions page.
+            The 2026 cycle lost its block to a missed deadline. Track the extension as a task under Summit Logistics.
           </p>
           <Pill tone="bad" className="mt-3">
             Deadline missed last cycle
@@ -65,7 +65,7 @@ export default async function LogisticsPage() {
       ) : (
         <Card title="Vendors" bodyClass="p-0 overflow-x-auto">
           <table className="w-full min-w-[820px]">
-            <thead className="border-b border-line bg-paper">
+            <thead className="border-b border-line">
               <tr>
                 <th className="th">Vendor</th>
                 <th className="th">Service</th>
@@ -77,7 +77,7 @@ export default async function LogisticsPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {vendors.map((v: any) => (
-                <tr key={v.id} className="hover:bg-paper">
+                <tr key={v.id} className="hover:bg-panel/60">
                   <td className="td font-medium text-ink">{v.name}</td>
                   <td className="td text-[13px] text-ink-muted">{v.service}</td>
                   <td className="td text-[13px] text-ink-muted">{v.paymentMethod ?? '—'}</td>

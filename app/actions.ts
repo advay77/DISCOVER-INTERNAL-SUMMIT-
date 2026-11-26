@@ -11,9 +11,13 @@ import {
   date as validDate,
   wholeNumber,
   id as validId,
+  idList,
+  email as validEmail,
   STATUSES,
   LIMITS as BOUND,
 } from '@/lib/validate';
+import { SESSION_KINDS, fromInputTime, toMinutes } from '@/lib/agenda';
+import { hashPassword } from '@/lib/auth';
 
 async function log(actorId: string, verb: string, entityType: string, summary: string, entityId?: string) {
   await db.activityLog.create({ data: { actorId, verb, entityType, entityId, summary } });
@@ -179,44 +183,73 @@ export async function updateSpeaker(id: string, data: FormData) {
   return { ok: true };
 }
 
-/* -------------------------------------------------------------- questions */
+/* ------------------------------------------------------------ run of show */
 
-export async function updateQuestion(id: string, data: FormData) {
+/** Create a session (no `id`) or update one (with `id`). */
+export async function saveSession(data: FormData) {
   const user = await requireUser();
-  const q = await db.openQuestion.findUnique({ where: { id } });
-  if (!q) return { error: 'Not found.' };
-  if (!allows(user, 'questions:edit', q)) return { error: 'You cannot edit this question.' };
+  if (scopeOf(user, 'agenda:edit') === 'none') return { error: 'You cannot edit the run of show.' };
+  const event = await db.event.findFirst({ where: { isCurrent: true } });
+  if (!event) return { error: 'No active cycle.' };
 
-  await db.openQuestion.update({
-    where: { id },
-    data: {
-      status: oneOf(data.get('status'), STATUSES.question, q.status as any),
-      update: optionalText(data.get('update'), BOUND.notes),
-    },
-  });
-  await notify(q.ownerId, user.id, `${user.name} updated a question`, '/questions');
-  revalidatePath('/questions');
-  return { ok: true };
+  const id = validId(data.get('id'));
+  const existing = id ? await db.session.findUnique({ where: { id } }) : null;
+  if (id && (!existing || existing.eventId !== event.id)) return { error: 'Session not found.' };
+
+  const title = text(data.get('title'), BOUND.title);
+  if (!title) return { error: 'A session needs a title.' };
+  const startTime = fromInputTime(data.get('startTime'));
+  const endTime = fromInputTime(data.get('endTime'));
+  if (!startTime || !endTime) return { error: 'Give a start and an end time.' };
+  if (toMinutes(endTime) <= toMinutes(startTime)) return { error: 'The end time must be after the start time.' };
+  const day = wholeNumber(data.get('day'), 1, 2, 1);
+
+  const fields = {
+    day,
+    startTime,
+    endTime,
+    title,
+    description: optionalText(data.get('description'), BOUND.notes),
+    kind: oneOf(data.get('kind'), SESSION_KINDS, 'session'),
+    room: optionalText(data.get('room'), BOUND.shortText),
+    ownerId: validId(data.get('ownerId')),
+    moderatorId: validId(data.get('moderatorId')),
+    status: oneOf(data.get('status'), ['planned', 'confirmed'] as const, 'planned'),
+    order: toMinutes(startTime),
+  };
+  // Speakers can only be attached by someone who can see the pipeline.
+  const speakerIds = can(user, 'speakers:view') ? idList(data.getAll('speakerIds')) : null;
+
+  const session = existing
+    ? await db.session.update({ where: { id: existing.id }, data: fields })
+    : await db.session.create({ data: { ...fields, eventId: event.id } });
+
+  if (speakerIds) {
+    await db.sessionSpeaker.deleteMany({ where: { sessionId: session.id } });
+    if (speakerIds.length) {
+      const valid = await db.speaker.findMany({ where: { id: { in: speakerIds } }, select: { id: true } });
+      for (const sp of valid) {
+        await db.sessionSpeaker.create({ data: { sessionId: session.id, speakerId: sp.id } });
+      }
+    }
+  }
+
+  await log(user.id, existing ? 'updated' : 'added', 'session', `${title} · Day ${day} ${startTime}`, session.id);
+  revalidatePath('/agenda');
+  revalidatePath('/summit');
+  return { ok: true, id: session.id };
 }
 
-export async function createQuestion(data: FormData) {
+export async function deleteSession(id: string) {
   const user = await requireUser();
-  if (scopeOf(user, 'questions:edit') === 'none') return { error: 'You cannot raise questions.' };
-  const event = await db.event.findFirst({ where: { isCurrent: true } });
-  const question = text(data.get('question'), BOUND.shortText);
-  if (!question) return { error: 'Write the question first.' };
-
-  const createdQuestion = await db.openQuestion.create({
-    data: {
-      question,
-      update: optionalText(data.get('update'), BOUND.notes),
-      ownerId: validId(data.get('ownerId')) ?? user.id,
-      workstreamId: validId(data.get('workstreamId')),
-      eventId: event?.id,
-    },
-  });
-  await notify(createdQuestion.ownerId, user.id, `${user.name} raised a question for you`, '/questions');
-  revalidatePath('/questions');
+  if (scopeOf(user, 'agenda:edit') === 'none') return { error: 'You cannot edit the run of show.' };
+  const sid = validId(id);
+  const session = sid ? await db.session.findUnique({ where: { id: sid } }) : null;
+  if (!session) return { error: 'Session not found.' };
+  await db.session.delete({ where: { id: session.id } });
+  await log(user.id, 'removed', 'session', `${session.title} · Day ${session.day} ${session.startTime}`);
+  revalidatePath('/agenda');
+  revalidatePath('/summit');
   return { ok: true };
 }
 
@@ -326,6 +359,226 @@ export async function setUserActive(userId: string, active: boolean) {
     },
   });
   revalidatePath('/admin');
+  return { ok: true };
+}
+
+/* ---------------------------------------------------- admin: people, roles */
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+const MIN_PASSWORD = 10;
+
+/** Every field on a member, edited by an admin. Each change is audited. */
+export async function adminUpdateUser(data: FormData) {
+  const actor = await requireUser();
+  if (!can(actor, 'admin:users')) return { error: 'You cannot change members.' };
+  const userId = validId(data.get('id'));
+  const target = userId
+    ? await db.user.findUnique({ where: { id: userId }, include: { role: true, memberships: true } })
+    : null;
+  if (!target) return { error: 'Member not found.' };
+
+  const name = text(data.get('name'), BOUND.name);
+  if (!name) return { error: 'A member needs a name.' };
+  const mail = validEmail(data.get('email'));
+  if (!mail) return { error: 'That email address does not look right.' };
+  if (mail !== target.email) {
+    const taken = await db.user.findUnique({ where: { email: mail } });
+    if (taken) return { error: 'Another member already uses that email.' };
+  }
+  const accentIn = String(data.get('accent') ?? '');
+  const accent = HEX.test(accentIn) ? accentIn : target.accent;
+
+  // Role: same rules as the role menu.
+  let roleId = target.roleId;
+  const wantedRole = validId(data.get('roleId'));
+  if (wantedRole && wantedRole !== target.roleId) {
+    if (!can(actor, 'admin:roles')) return { error: 'You cannot change roles.' };
+    const role = await db.role.findUnique({ where: { id: wantedRole } });
+    if (!role) return { error: 'Role not found.' };
+    if (target.role.key === 'president' && role.key !== 'president') {
+      const presidents = await db.user.count({ where: { role: { key: 'president' }, isActive: true } });
+      if (presidents <= 1) return { error: 'There must always be one President. Appoint the new one first.' };
+    }
+    roleId = role.id;
+  }
+
+  // Active: you cannot switch yourself off.
+  const isActive = data.get('isActive') === 'on';
+  if (!isActive && target.id === actor.id) return { error: 'You cannot deactivate yourself.' };
+
+  const before = {
+    name: target.name,
+    email: target.email,
+    title: target.title ?? '',
+    company: target.company ?? '',
+    phone: target.phone ?? '',
+    role: target.role.name,
+    active: target.isActive ? 'active' : 'inactive',
+  };
+
+  const updated = await db.user.update({
+    where: { id: target.id },
+    data: {
+      name,
+      email: mail,
+      title: optionalText(data.get('title'), BOUND.title),
+      company: optionalText(data.get('company'), BOUND.name),
+      phone: optionalText(data.get('phone'), 40),
+      accent,
+      roleId,
+      isActive,
+      // Email, role or access changed → end the sessions they have open.
+      ...(mail !== target.email || roleId !== target.roleId || isActive !== target.isActive
+        ? { sessionEpoch: { increment: 1 } }
+        : {}),
+    },
+    include: { role: true },
+  });
+
+  // Workstreams: replace the set.
+  const wanted = new Set(idList(data.getAll('workstreamIds')));
+  const current = new Set(target.memberships.map((m) => m.workstreamId));
+  const valid = await db.workstream.findMany({ where: { id: { in: [...wanted] } }, select: { id: true } });
+  const keep = new Set(valid.map((w) => w.id));
+  await db.membership.deleteMany({ where: { userId: target.id, workstreamId: { notIn: [...keep] } } });
+  for (const w of keep) {
+    if (!current.has(w)) await db.membership.create({ data: { userId: target.id, workstreamId: w } });
+  }
+
+  const after = {
+    name: updated.name,
+    email: updated.email,
+    title: updated.title ?? '',
+    company: updated.company ?? '',
+    phone: updated.phone ?? '',
+    role: updated.role.name,
+    active: updated.isActive ? 'active' : 'inactive',
+  };
+  for (const k of Object.keys(before) as (keyof typeof before)[]) {
+    if (before[k] !== after[k]) {
+      await db.auditLog.create({
+        data: { actorId: actor.id, action: `user.${k}`, target: updated.name, before: before[k] || '—', after: after[k] || '—' },
+      });
+    }
+  }
+  const wsChanged = keep.size !== current.size || [...keep].some((w) => !current.has(w));
+  if (wsChanged) {
+    await db.auditLog.create({ data: { actorId: actor.id, action: 'user.workstreams', target: updated.name } });
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/team');
+  return { ok: true };
+}
+
+/** Sets a new password for a member and signs them out everywhere. */
+export async function adminSetPassword(userId: string, password: string) {
+  const actor = await requireUser();
+  if (!can(actor, 'admin:users')) return { error: 'You cannot change members.' };
+  const id = validId(userId);
+  const target = id ? await db.user.findUnique({ where: { id } }) : null;
+  if (!target) return { error: 'Member not found.' };
+  const pw = String(password ?? '');
+  if (pw.length < MIN_PASSWORD || pw.length > 200) return { error: `Use at least ${MIN_PASSWORD} characters.` };
+
+  await db.user.update({
+    where: { id: target.id },
+    data: { passwordHash: await hashPassword(pw), sessionEpoch: { increment: 1 } },
+  });
+  await db.auditLog.create({ data: { actorId: actor.id, action: 'user.password', target: target.name } });
+  return { ok: true };
+}
+
+/** Issues a new account. */
+export async function adminCreateUser(data: FormData) {
+  const actor = await requireUser();
+  if (!can(actor, 'admin:users')) return { error: 'You cannot add members.' };
+
+  const name = text(data.get('name'), BOUND.name);
+  if (!name) return { error: 'A member needs a name.' };
+  const mail = validEmail(data.get('email'));
+  if (!mail) return { error: 'That email address does not look right.' };
+  if (await db.user.findUnique({ where: { email: mail } })) return { error: 'Another member already uses that email.' };
+  const pw = String(data.get('password') ?? '');
+  if (pw.length < MIN_PASSWORD || pw.length > 200) return { error: `Use a password of at least ${MIN_PASSWORD} characters.` };
+
+  const roleId = validId(data.get('roleId'));
+  const role = roleId ? await db.role.findUnique({ where: { id: roleId } }) : null;
+  if (!role) return { error: 'Choose a role.' };
+  // Anyone but a role-admin can only issue the most junior role.
+  if (!can(actor, 'admin:roles')) {
+    const junior = await db.role.findFirst({ orderBy: { level: 'desc' } });
+    if (role.id !== junior?.id) return { error: 'You can only add members with the most junior role.' };
+  }
+
+  const accentIn = String(data.get('accent') ?? '');
+  const created = await db.user.create({
+    data: {
+      name,
+      email: mail,
+      passwordHash: await hashPassword(pw),
+      title: optionalText(data.get('title'), BOUND.title),
+      company: optionalText(data.get('company'), BOUND.name),
+      phone: optionalText(data.get('phone'), 40),
+      accent: HEX.test(accentIn) ? accentIn : '#1D6FE0',
+      roleId: role.id,
+    },
+  });
+  const ws = await db.workstream.findMany({ where: { id: { in: idList(data.getAll('workstreamIds')) } }, select: { id: true } });
+  for (const w of ws) await db.membership.create({ data: { userId: created.id, workstreamId: w.id } });
+
+  await db.auditLog.create({ data: { actorId: actor.id, action: 'user.create', target: name, after: role.name } });
+  revalidatePath('/admin');
+  revalidatePath('/team');
+  return { ok: true, id: created.id };
+}
+
+/** Rename a role or change its description. Permissions stay in the matrix. */
+export async function adminUpdateRole(data: FormData) {
+  const actor = await requireUser();
+  if (!can(actor, 'admin:permissions')) return { error: 'Only the President can edit roles.' };
+  const id = validId(data.get('id'));
+  const role = id ? await db.role.findUnique({ where: { id } }) : null;
+  if (!role) return { error: 'Role not found.' };
+  const name = text(data.get('name'), BOUND.name);
+  if (!name) return { error: 'A role needs a name.' };
+  const description = optionalText(data.get('description'), BOUND.shortText);
+  await db.role.update({ where: { id: role.id }, data: { name, description } });
+  if (name !== role.name) {
+    await db.auditLog.create({ data: { actorId: actor.id, action: 'role.rename', target: role.name, before: role.name, after: name } });
+  }
+  revalidatePath('/admin');
+  revalidatePath('/team');
+  return { ok: true };
+}
+
+/** Rename a workstream, recolour it, describe it, or change its lead. */
+export async function adminUpdateWorkstream(data: FormData) {
+  const actor = await requireUser();
+  if (!can(actor, 'admin:permissions')) return { error: 'Only the President can edit workstreams.' };
+  const id = validId(data.get('id'));
+  const ws = id ? await db.workstream.findUnique({ where: { id } }) : null;
+  if (!ws) return { error: 'Workstream not found.' };
+  const name = text(data.get('name'), BOUND.name);
+  if (!name) return { error: 'A workstream needs a name.' };
+  const colorIn = String(data.get('color') ?? '');
+  const leadId = validId(data.get('leadId'));
+
+  await db.workstream.update({
+    where: { id: ws.id },
+    data: {
+      name,
+      description: optionalText(data.get('description'), BOUND.shortText),
+      color: HEX.test(colorIn) ? colorIn : ws.color,
+      leadId: leadId ?? null,
+    },
+  });
+  await db.auditLog.create({
+    data: { actorId: actor.id, action: 'workstream.update', target: name, before: ws.name !== name ? ws.name : null, after: ws.name !== name ? name : null },
+  });
+  revalidatePath('/admin');
+  revalidatePath('/team');
+  revalidatePath('/tasks');
   return { ok: true };
 }
 

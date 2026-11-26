@@ -48,7 +48,7 @@ export function MobileTabBar({ nav }: { nav: NavEntry[] }) {
               <p className="text-[15px] font-semibold text-ink">More</p>
               <button
                 onClick={() => setOpen(false)}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-ink-muted hover:bg-paper"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-ink-muted hover:bg-panel/60"
                 aria-label="Close"
               >
                 ✕

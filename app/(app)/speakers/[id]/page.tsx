@@ -27,7 +27,7 @@ export default async function SpeakerDetail({ params }: { params: Promise<{ id: 
         ← Back to speakers
       </Link>
 
-      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="space-y-5">
           <Card>
             <div className="flex flex-wrap items-center gap-2">

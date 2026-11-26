@@ -2,13 +2,14 @@ import Link from 'next/link';
 import { requireUser, can } from '@/lib/authz';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
-import { PageHeader, Card, Avatar, Pill } from '@/components/ui';
+import { PageHeader, Card, Avatar, Pill, StatTile } from '@/components/ui';
 import { CAPABILITIES, CAPABILITY_GROUPS } from '@/lib/capabilities';
 import { relativeTime, longDate } from '@/lib/format';
 import { PermissionMatrix } from './PermissionMatrix';
 import { IconTeam, IconAdmin, IconChat, IconDashboard } from '@/components/icons';
 import { PeopleAdmin } from './PeopleAdmin';
 import { EventSettings } from './EventSettings';
+import { OrgAdmin } from './OrgAdmin';
 
 export default async function AdminPage({
   searchParams,
@@ -24,7 +25,7 @@ export default async function AdminPage({
   const [roles, people, workstreams, event, audit, channels] = await Promise.all([
     db.role.findMany({ orderBy: { level: 'asc' }, include: { permissions: true, users: true } }),
     db.user.findMany({ orderBy: [{ role: { level: 'asc' } }, { name: 'asc' }], include: { role: true, memberships: { include: { workstream: true } } } }),
-    db.workstream.findMany({ orderBy: { order: 'asc' } }),
+    db.workstream.findMany({ orderBy: { order: 'asc' }, include: { _count: { select: { members: true } } } }),
     db.event.findFirst({ where: { isCurrent: true } }),
     db.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 25, include: { actor: true } }),
     db.channel.findMany({
@@ -36,6 +37,7 @@ export default async function AdminPage({
   const tabs = [
     { key: 'permissions', label: 'Roles & permissions', show: can(user, 'admin:permissions') || can(user, 'admin:roles') },
     { key: 'people', label: 'People', show: can(user, 'admin:users') },
+    { key: 'org', label: 'Workstreams & roles', show: can(user, 'admin:permissions') },
     { key: 'event', label: 'Event', show: can(user, 'admin:event') },
     { key: 'channels', label: 'Channels', show: can(user, 'admin:users') },
     { key: 'audit', label: 'Audit log', show: can(user, 'admin:permissions') },
@@ -52,21 +54,15 @@ export default async function AdminPage({
   ];
 
   return (
-    <div className="mx-auto max-w-[1340px]">
+    <div className="mx-auto max-w-[1440px]">
       <PageHeader
         title="Admin & access"
         subtitle="The President holds master access and decides who sees what. Everything here is audited."
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {summary.map((c) => (
-          <div key={c.label} className="card px-4 py-3">
-            <div className="flex items-center justify-between">
-              <span className="display text-[26px] leading-none text-ink">{c.value}</span>
-              <span className="text-ink-faint">{c.icon}</span>
-            </div>
-            <p className="mt-1.5 text-[11px] uppercase tracking-label text-ink-muted">{c.label}</p>
-          </div>
+        {summary.map((c, i) => (
+          <StatTile key={c.label} value={c.value} label={c.label} tone="navy" icon={c.icon} highlight={i === 0} />
         ))}
       </div>
 
@@ -77,8 +73,8 @@ export default async function AdminPage({
             href={`/admin?tab=${t.key}`}
             className={
               tab === t.key
-                ? 'rounded-lg bg-navy px-3.5 py-1.5 text-[13px] font-semibold text-white'
-                : 'rounded-lg border border-line bg-white px-3.5 py-1.5 text-[13px] font-medium text-ink-muted hover:text-ink'
+                ? 'rounded-full bg-navy px-4 py-1.5 text-[13px] font-semibold text-white'
+                : 'rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-ink-muted shadow-card hover:text-ink'
             }
           >
             {t.label}
@@ -91,9 +87,11 @@ export default async function AdminPage({
           <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {roles.map((r) => (
               <div key={r.id} className="card p-4">
-                <p className="text-[14px] font-bold text-ink">{r.name}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[14px] font-semibold text-ink">{r.name}</p>
+                  <span className="rounded-full bg-panel px-2 py-0.5 text-[11.5px] font-semibold text-ink-muted">{r.users.length}</span>
+                </div>
                 <p className="mt-1 text-[12px] leading-snug text-ink-muted">{r.description}</p>
-                <p className="mt-3 text-[12px] font-semibold text-brand">{r.users.length} members</p>
               </div>
             ))}
           </div>
@@ -131,11 +129,29 @@ export default async function AdminPage({
             isActive: p.isActive,
             roleId: p.roleId,
             roleName: p.role.name,
-            workstreams: p.memberships.map((m) => m.workstream.name),
+            phone: p.phone,
+            workstreamIds: p.memberships.map((m) => m.workstreamId),
           }))}
           roles={roles.map((r) => ({ id: r.id, name: r.name }))}
+          workstreams={workstreams.map((w) => ({ id: w.id, name: w.name, color: w.color }))}
           meId={user.id}
           canChangeRoles={can(user, 'admin:roles')}
+        />
+      )}
+
+      {tab === 'org' && can(user, 'admin:permissions') && (
+        <OrgAdmin
+          workstreams={workstreams.map((w) => ({
+            id: w.id,
+            name: w.name,
+            description: w.description,
+            color: w.color,
+            leadId: w.leadId,
+            restricted: w.restricted,
+            members: w._count.members,
+          }))}
+          roles={roles.map((r) => ({ id: r.id, name: r.name, description: r.description, members: r.users.length }))}
+          people={people.filter((p) => p.isActive).map((p) => ({ id: p.id, name: p.name }))}
         />
       )}
 
@@ -167,7 +183,7 @@ export default async function AdminPage({
           }
         >
           <table className="w-full min-w-[640px]">
-            <thead className="border-b border-line bg-paper">
+            <thead className="border-b border-line">
               <tr>
                 <th className="th">Channel</th>
                 <th className="th">Type</th>
@@ -178,7 +194,7 @@ export default async function AdminPage({
             </thead>
             <tbody className="divide-y divide-line">
               {channels.map((c) => (
-                <tr key={c.id} className="hover:bg-paper">
+                <tr key={c.id} className="hover:bg-panel/60">
                   <td className="td">
                     <Link href={`/chat/${c.key}`} className="font-medium text-ink hover:text-brand">
                       #{c.name}
@@ -215,7 +231,7 @@ export default async function AdminPage({
             <p className="p-5 text-[13px] text-ink-faint">Nothing recorded yet.</p>
           ) : (
             <table className="w-full">
-              <thead className="border-b border-line bg-paper">
+              <thead className="border-b border-line">
                 <tr>
                   <th className="th">Who</th>
                   <th className="th">Action</th>

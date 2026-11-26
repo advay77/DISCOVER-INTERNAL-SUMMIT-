@@ -49,7 +49,7 @@ export default async function EventsPage({
     return (
       <Link
         href={`/events/${e.id}`}
-        className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5 transition hover:bg-paper"
+        className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5 transition hover:bg-panel/60"
       >
         <div className="w-[76px] shrink-0">
           <p className="text-[11px] uppercase tracking-label text-ink-faint">
@@ -93,7 +93,7 @@ export default async function EventsPage({
   };
 
   return (
-    <div className="mx-auto max-w-[1180px]">
+    <div className="mx-auto max-w-[1440px]">
       <PageHeader
         title="Events"
         subtitle="Everything DISCOVER runs — the Annual Summit, and the webinars, networking evenings and campus sessions around it."
@@ -126,8 +126,8 @@ export default async function EventsPage({
         <Link
           href="/events"
           className={clsx(
-            'rounded-lg px-3 py-1.5 text-[13px] font-medium',
-            !kind ? 'bg-navy font-semibold text-white' : 'border border-line bg-white text-ink-muted hover:text-ink',
+            'rounded-full px-3.5 py-1.5 text-[13px] font-medium',
+            !kind ? 'bg-navy font-semibold text-white' : 'bg-white text-ink-muted shadow-card hover:text-ink',
           )}
         >
           All
@@ -137,8 +137,8 @@ export default async function EventsPage({
             key={k}
             href={`/events?kind=${k}`}
             className={clsx(
-              'rounded-lg px-3 py-1.5 text-[13px] font-medium',
-              kind === k ? 'bg-navy font-semibold text-white' : 'border border-line bg-white text-ink-muted hover:text-ink',
+              'rounded-full px-3.5 py-1.5 text-[13px] font-medium',
+              kind === k ? 'bg-navy font-semibold text-white' : 'bg-white text-ink-muted shadow-card hover:text-ink',
             )}
           >
             {KIND_LABEL[k]}

@@ -26,7 +26,7 @@ export default async function SponsorsPage() {
   const pipeline = canSeeMoney ? rows.reduce((sum, s) => sum + (s.amount ?? 0), 0) : null;
 
   return (
-    <div className="mx-auto max-w-[1180px]">
+    <div className="mx-auto max-w-[1440px]">
       <PageHeader title="Sponsors" subtitle="Partnerships pipeline for the current cycle." />
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
@@ -45,7 +45,7 @@ export default async function SponsorsPage() {
       ) : (
         <Card bodyClass="p-0 overflow-x-auto">
           <table className="w-full min-w-[820px]">
-            <thead className="border-b border-line bg-paper">
+            <thead className="border-b border-line">
               <tr>
                 <th className="th">Company</th>
                 <th className="th">Tier</th>
@@ -58,7 +58,7 @@ export default async function SponsorsPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {sponsors.map((s: any) => (
-                <tr key={s.id} className="hover:bg-paper">
+                <tr key={s.id} className="hover:bg-panel/60">
                   <td className="td font-medium text-ink">{s.company}</td>
                   <td className="td">
                     <Pill tone={TIER_TONE[s.tier] ?? 'neutral'}>{s.tier}</Pill>

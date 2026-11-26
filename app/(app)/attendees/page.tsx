@@ -20,7 +20,7 @@ export default async function AttendeesPage() {
   const students = attendees.filter((a) => a.ticketType === 'Student').length;
 
   return (
-    <div className="mx-auto max-w-[1180px]">
+    <div className="mx-auto max-w-[1440px]">
       <PageHeader
         title="Attendees"
         subtitle="Registrations against the goals the board set in the December meeting."
@@ -85,7 +85,7 @@ export default async function AttendeesPage() {
         bodyClass="p-0 overflow-x-auto"
       >
         <table className="w-full min-w-[720px]">
-          <thead className="border-b border-line bg-paper">
+          <thead className="border-b border-line">
             <tr>
               <th className="th">Name</th>
               <th className="th">Company</th>
@@ -97,7 +97,7 @@ export default async function AttendeesPage() {
           </thead>
           <tbody className="divide-y divide-line">
             {attendees.slice(0, 80).map((a) => (
-              <tr key={a.id} className="hover:bg-paper">
+              <tr key={a.id} className="hover:bg-panel/60">
                 <td className="td font-medium text-ink">{a.name}</td>
                 <td className="td text-[13px] text-ink-muted">{a.company}</td>
                 {showContact && <td className="td text-[12.5px] text-ink-muted">{a.email}</td>}

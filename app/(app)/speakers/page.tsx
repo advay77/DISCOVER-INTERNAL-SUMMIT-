@@ -5,6 +5,13 @@ import { PageHeader, Card, Pill, StatusPill, Avatar, StatTile, Empty } from '@/c
 import { IconSpeaker, IconCheck, IconRetro, IconAlert, IconChat } from '@/components/icons';
 
 const STATUS_ORDER = ['Identified', 'Invited', 'Responded', 'Confirmed', 'Declined'];
+const STATUS_ACCENT: Record<string, string> = {
+  Identified: '#8F8F89',
+  Invited: '#1F5FA8',
+  Responded: '#B4761F',
+  Confirmed: '#1E7A4B',
+  Declined: '#A62B2B',
+};
 
 export default async function SpeakersPage({
   searchParams,
@@ -46,7 +53,7 @@ export default async function SpeakersPage({
   const canSeeContact = scopeOf(user, 'speakers:contact') !== 'none';
 
   return (
-    <div className="mx-auto max-w-[1340px]">
+    <div className="mx-auto max-w-[1440px]">
       <PageHeader
         title="Speakers"
         subtitle="The outreach pipeline from the 2026 tracker — with the summary computed, not typed."
@@ -60,7 +67,7 @@ export default async function SpeakersPage({
       </div>
 
       {bioMissing > 0 && (
-        <div className="mb-5 flex items-center gap-3 rounded-card border border-brass/30 bg-brass/5 px-5 py-3.5">
+        <div className="mb-5 flex items-center gap-3 rounded-2xl bg-brass-100 px-5 py-3.5">
           <IconAlert size={18} className="mt-0.5 shrink-0 text-brass" />
           <p className="text-[13.5px] text-ink">
             <strong className="font-semibold">{bioMissing} confirmed {bioMissing === 1 ? 'speaker is' : 'speakers are'} missing a bio or headshot.</strong>{' '}
@@ -74,8 +81,8 @@ export default async function SpeakersPage({
           href="/speakers"
           className={
             !status
-              ? 'rounded-lg bg-navy px-3 py-1.5 text-[13px] font-semibold text-white'
-              : 'rounded-lg border border-line bg-white px-3 py-1.5 text-[13px] font-medium text-ink-muted hover:text-ink'
+              ? 'rounded-full bg-navy px-3.5 py-1.5 text-[13px] font-semibold text-white'
+              : 'rounded-full bg-white px-3.5 py-1.5 text-[13px] font-medium text-ink-muted shadow-card hover:text-ink'
           }
         >
           All
@@ -86,8 +93,8 @@ export default async function SpeakersPage({
             href={`/speakers?status=${s}`}
             className={
               status === s
-                ? 'rounded-lg bg-navy px-3 py-1.5 text-[13px] font-semibold text-white'
-                : 'rounded-lg border border-line bg-white px-3 py-1.5 text-[13px] font-medium text-ink-muted hover:text-ink'
+                ? 'rounded-full bg-navy px-3.5 py-1.5 text-[13px] font-semibold text-white'
+                : 'rounded-full bg-white px-3.5 py-1.5 text-[13px] font-medium text-ink-muted shadow-card hover:text-ink'
             }
           >
             {s}
@@ -99,100 +106,55 @@ export default async function SpeakersPage({
         <Empty title="No speakers in this view" />
       ) : (
         <>
-        {/* Phones: one card per speaker, no sideways scrolling. */}
-        <div className="space-y-2.5 sm:hidden">
+        {/* One card per speaker: two up on tablets, three on desktop. */}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {speakers.map((s: any) => (
             <Link
               key={s.id}
               href={`/speakers/${s.id}`}
-              className="card block px-4 py-3.5 active:bg-paper"
+              className="card group flex flex-col p-4 transition hover:shadow-[0_6px_20px_rgba(20,20,20,0.08)]"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[15px] font-semibold leading-snug text-ink">{s.name}</p>
-                  <p className="mt-0.5 text-[12.5px] leading-snug text-ink-muted">
+              <div className="flex items-start gap-3">
+                <Avatar name={s.name} accent={STATUS_ACCENT[s.status] ?? '#8F8F89'} size={42} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-semibold leading-snug text-ink group-hover:underline">{s.name}</p>
+                  <p className="line-clamp-2 text-[12.5px] leading-snug text-ink-muted">
                     {s.title}
                     {s.company ? ` · ${s.company}` : ''}
                   </p>
                 </div>
                 <StatusPill status={s.status} />
               </div>
-              {s.topicFit && (
-                <p className="mt-2 line-clamp-2 text-[12.5px] leading-snug text-ink-muted">{s.topicFit}</p>
-              )}
-              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                <Pill tone={s.speakerType === 'Keynote' ? 'brand' : 'neutral'}>{s.speakerType}</Pill>
+
+              <div className="subcard mt-3 flex-1 px-3.5 py-2.5">
+                <p className="text-[11.5px] font-medium text-ink-faint">Session fit</p>
+                <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-ink">{s.topicFit ?? 'Not placed yet'}</p>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                <Pill tone={s.speakerType === 'Keynote' ? 'lime' : 'neutral'} dot={s.speakerType !== 'Keynote'}>
+                  {s.speakerType}
+                </Pill>
                 <Pill tone={s.bio ? 'ok' : 'neutral'}>Bio</Pill>
                 <Pill tone={s.headshot ? 'ok' : 'neutral'}>Photo</Pill>
                 {s.prepCallNeeded && <Pill tone="warn">Prep call</Pill>}
-                {s.owner && (
-                  <span className="ml-auto flex items-center gap-1.5 text-[11.5px] text-ink-faint">
+                {s.priority && <Pill tone="navy" dot={false}>Priority {s.priority}</Pill>}
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-3 text-[12px]">
+                {s.owner ? (
+                  <span className="flex min-w-0 items-center gap-1.5 text-ink-muted">
                     <Avatar name={s.owner.name} accent={s.owner.accent} size={20} />
-                    {s.owner.name.split(' ')[0]}
+                    <span className="truncate">via {s.owner.name}</span>
                   </span>
+                ) : (
+                  <span className="text-ink-faint">No owner</span>
                 )}
+                {canSeeContact && <span className="truncate text-ink-faint">{s.email ?? 'No email'}</span>}
               </div>
             </Link>
           ))}
         </div>
-
-        <Card bodyClass="p-0 overflow-x-auto" className="hidden sm:block">
-          <table className="w-full min-w-[980px]">
-            <thead className="border-b border-line bg-paper">
-              <tr>
-                <th className="th">Speaker</th>
-                <th className="th">Type</th>
-                <th className="th">Session fit</th>
-                <th className="th">Owner</th>
-                {canSeeContact && <th className="th">Contact</th>}
-                <th className="th">Ready</th>
-                <th className="th">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {speakers.map((s: any) => (
-                <tr key={s.id} className="hover:bg-paper">
-                  <td className="td">
-                    <Link href={`/speakers/${s.id}`} className="font-medium text-ink hover:text-brand">
-                      {s.name}
-                    </Link>
-                    <div className="text-[12px] leading-snug text-ink-faint">
-                      {s.title}
-                      {s.company ? ` · ${s.company}` : ''}
-                    </div>
-                  </td>
-                  <td className="td">
-                    <Pill tone={s.speakerType === 'Keynote' ? 'brand' : 'neutral'}>{s.speakerType}</Pill>
-                  </td>
-                  <td className="td max-w-[260px]">
-                    <span className="line-clamp-2 text-[13px] text-ink-muted">{s.topicFit ?? '—'}</span>
-                  </td>
-                  <td className="td">
-                    {s.owner && (
-                      <span className="flex items-center gap-2">
-                        <Avatar name={s.owner.name} accent={s.owner.accent} size={22} />
-                        <span className="text-[13px]">{s.owner.name}</span>
-                      </span>
-                    )}
-                  </td>
-                  {canSeeContact && (
-                    <td className="td text-[12.5px] text-ink-muted">{s.email ?? '—'}</td>
-                  )}
-                  <td className="td">
-                    <span className="flex gap-1.5">
-                      <Pill tone={s.bio ? 'ok' : 'neutral'}>Bio</Pill>
-                      <Pill tone={s.headshot ? 'ok' : 'neutral'}>Photo</Pill>
-                      {s.prepCallNeeded && <Pill tone="warn">Prep call</Pill>}
-                    </span>
-                  </td>
-                  <td className="td">
-                    <StatusPill status={s.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
         </>
       )}
 

@@ -40,7 +40,7 @@ export default async function FilesPage({
   for (const row of grouped) counts[row.folder] = row._count._all;
 
   return (
-    <div className="mx-auto max-w-[1180px]">
+    <div className="mx-auto max-w-[1440px]">
       <PageHeader
         title="Files"
         subtitle="The programme book, floorplans, contracts and decks — out of inboxes, attachable to any record."
@@ -73,7 +73,7 @@ export default async function FilesPage({
       ) : (
         <Card bodyClass="p-0">
           <table className="w-full">
-            <thead className="border-b border-line bg-paper">
+            <thead className="border-b border-line">
               <tr>
                 <th className="th">File</th>
                 <th className="th">Folder</th>
@@ -84,7 +84,7 @@ export default async function FilesPage({
             </thead>
             <tbody className="divide-y divide-line">
               {files.map((f) => (
-                <tr key={f.id} className="hover:bg-paper">
+                <tr key={f.id} className="hover:bg-panel/60">
                   <td className="td">
                     <a href={`/api/files/${f.id}`} className="font-medium text-ink hover:text-brand">
                       {f.name}

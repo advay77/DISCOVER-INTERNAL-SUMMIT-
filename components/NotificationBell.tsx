@@ -93,7 +93,7 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
                     key={note.id}
                     type="button"
                     onClick={() => openNote(note)}
-                    className="flex w-full items-start gap-2.5 border-b border-line px-4 py-3 text-left last:border-b-0 hover:bg-paper"
+                    className="flex w-full items-start gap-2.5 border-b border-line px-4 py-3 text-left last:border-b-0 hover:bg-panel/60"
                   >
                     <span
                       className={

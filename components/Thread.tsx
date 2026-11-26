@@ -357,7 +357,7 @@ export function Thread({
                       <button
                         key={e}
                         onClick={() => react(m.id, e)}
-                        className="rounded-md px-1.5 py-1 text-[15px] hover:bg-paper"
+                        className="rounded-md px-1.5 py-1 text-[15px] hover:bg-panel/60"
                       >
                         {e}
                       </button>
