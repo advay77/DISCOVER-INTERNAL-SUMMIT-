@@ -31,9 +31,9 @@ export function Topbar({
   const here = nav.find((n) => path === n.href || path.startsWith(n.href + '/'));
 
   return (
-    <header className="sticky top-0 z-30 flex h-[56px] items-center gap-2 border-b border-line bg-white/95 px-3.5 backdrop-blur sm:gap-3 sm:px-5 lg:h-[72px] lg:border-b-0 lg:bg-paper/85 lg:px-6">
+    <header className="sticky top-0 z-30 flex h-[56px] items-center gap-2 border-b border-line bg-white px-3.5 sm:gap-3 sm:px-5 lg:h-[72px] lg:border-b-0 lg:bg-paper lg:px-6">
       {/* Phone and tablet: the mark and the page you are on. */}
-      <Link href="/dashboard" className="shrink-0 lg:hidden" aria-label="DISCOVER home">
+      <Link prefetch={false} href="/dashboard" className="shrink-0 lg:hidden" aria-label="DISCOVER home">
         <Logo tone="dark" size="sm" tagline={false} />
       </Link>
       {here && (
@@ -56,7 +56,7 @@ export function Topbar({
       </form>
 
       <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
-      <Link
+      <Link prefetch={false}
         href="/search"
         className="flex h-10 w-10 items-center justify-center rounded-full text-ink-muted hover:bg-paper lg:hidden"
         aria-label="Search"
@@ -91,7 +91,7 @@ export function Topbar({
                   <p className="truncate text-[13.5px] font-semibold leading-tight text-ink">{user.name}</p>
                   <p className="truncate text-[11.5px] leading-tight text-ink-muted">{user.title ?? ''}</p>
                   <p className="truncate text-[11px] leading-tight text-ink-faint">{user.email}</p>
-                  <span className="mt-1.5 inline-block rounded-full bg-lime px-2 py-[2px] text-[10.5px] font-semibold text-lime-ink">
+                  <span className="mt-1.5 inline-block rounded-full bg-accent px-2 py-[2px] text-[10.5px] font-semibold text-accent-ink">
                     {roleName}
                   </span>
                 </div>
@@ -99,7 +99,7 @@ export function Topbar({
 
               <nav className="py-1">
                 {canAdmin && (
-                  <Link
+                  <Link prefetch={false}
                     href="/admin"
                     onClick={() => setOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-panel/60"
@@ -108,7 +108,7 @@ export function Topbar({
                     Admin &amp; access
                   </Link>
                 )}
-                <Link
+                <Link prefetch={false}
                   href="/profile"
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-panel/60"
@@ -116,7 +116,7 @@ export function Topbar({
                   <IconTeam size={15} className="text-ink-faint" />
                   Your profile
                 </Link>
-                <Link
+                <Link prefetch={false}
                   href="/team"
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-panel/60"
@@ -124,7 +124,7 @@ export function Topbar({
                   <IconTeam size={15} className="text-ink-faint" />
                   Member directory
                 </Link>
-                <Link
+                <Link prefetch={false}
                   href="/chat"
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-ink hover:bg-panel/60"

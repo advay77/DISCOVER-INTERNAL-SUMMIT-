@@ -103,7 +103,7 @@ export function PeopleAdmin({
                   <span className="flex items-center gap-3">
                     <Avatar name={p.name} accent={p.accent} size={34} />
                     <span className="min-w-0">
-                      <Link href={`/profile/${p.id}`} className="block truncate text-[13.5px] font-semibold text-ink hover:underline">
+                      <Link prefetch={false} href={`/profile/${p.id}`} className="block truncate text-[13.5px] font-semibold text-ink hover:underline">
                         {p.name}
                         {p.id === meId && <span className="ml-1.5 text-[11.5px] font-medium text-ink-faint">(you)</span>}
                       </Link>
@@ -234,7 +234,7 @@ function MemberForm({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/35 p-4 py-10 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/45 p-4 py-10"
       role="dialog"
       aria-modal="true"
       aria-label={isNew ? 'Add member' : `Edit ${person!.name}`}

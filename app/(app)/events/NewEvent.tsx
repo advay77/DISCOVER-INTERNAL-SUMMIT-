@@ -33,7 +33,7 @@ export function NewEvent({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/35 p-4 py-10 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/45 p-4 py-10">
           <div className="card my-auto w-full max-w-lg p-6">
             <div className="mb-5 flex items-start justify-between">
               <div>

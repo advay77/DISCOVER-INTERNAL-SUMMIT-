@@ -31,7 +31,7 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <Link href="/tasks" className="mb-3 inline-block text-[13px] font-medium text-ink-muted hover:text-brand">
+      <Link prefetch={false} href="/tasks" className="mb-3 inline-block text-[13px] font-medium text-ink-muted hover:text-brand">
         ← Back to tasks
       </Link>
 

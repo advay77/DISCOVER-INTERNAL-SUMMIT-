@@ -1,5 +1,6 @@
 import { requireCan, can } from '@/lib/authz';
 import { db } from '@/lib/db';
+import { currentEvent } from '@/lib/event';
 import { PageHeader, Card, StatusPill, Pill, StatTile, Bar } from '@/components/ui';
 import { IconAttendees, IconCheck, IconClock, IconTask } from '@/components/icons';
 import { pct } from '@/lib/format';
@@ -9,7 +10,7 @@ export default async function AttendeesPage() {
   const showContact = can(user, 'attendees:contact');
 
   const [event, attendees] = await Promise.all([
-    db.event.findFirst({ where: { isCurrent: true } }),
+    currentEvent(),
     db.attendee.findMany({ orderBy: { createdAt: 'desc' }, take: 300 }),
   ]);
 

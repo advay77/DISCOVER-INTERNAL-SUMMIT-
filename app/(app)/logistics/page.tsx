@@ -1,5 +1,6 @@
 import { requireCan, scopeOf, scopeFilter, redactMany, MONEY_GATES } from '@/lib/authz';
 import { db } from '@/lib/db';
+import { currentEvent } from '@/lib/event';
 import { PageHeader, Card, StatusPill, Avatar, StatTile, Empty, Pill } from '@/components/ui';
 import { money } from '@/lib/format';
 import { IconLogistics, IconCheck, IconClock, IconMoney, IconPin } from '@/components/icons';
@@ -12,7 +13,7 @@ export default async function LogisticsPage() {
 
   const [rows, event] = await Promise.all([
     db.vendor.findMany({ where, orderBy: { name: 'asc' }, include: { owner: true, workstream: true } }),
-    db.event.findFirst({ where: { isCurrent: true } }),
+    currentEvent(),
   ]);
 
   const vendors = redactMany(user, rows as any[], MONEY_GATES as any);

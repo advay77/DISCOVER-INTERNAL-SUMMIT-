@@ -38,20 +38,30 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
       take: 6,
     }),
     db.channelMember.count({ where: { channelId: channel.id } }),
-    // The latest message per conversation, for the previews in the rail.
-    Promise.all(
-      memberships.map((m) =>
-        db.message.findFirst({
-          where: { channelId: m.channelId, deletedAt: null },
-          orderBy: { createdAt: 'desc' },
-          select: { body: true, createdAt: true, author: { select: { id: true, name: true } }, _count: { select: { files: true } } },
-        }),
+    // The latest message per conversation, for the previews in the rail:
+    // two queries in total, whatever the number of channels.
+    db.message
+      .groupBy({
+        by: ['channelId'],
+        where: { channelId: { in: memberships.map((m) => m.channelId) }, deletedAt: null },
+        _max: { createdAt: true },
+      })
+      .then((latest) =>
+        latest.length
+          ? db.message.findMany({
+              where: {
+                deletedAt: null,
+                OR: latest.map((l) => ({ channelId: l.channelId, createdAt: l._max.createdAt! })),
+              },
+              select: { channelId: true, body: true, createdAt: true, author: { select: { id: true, name: true } }, _count: { select: { files: true } } },
+            })
+          : [],
       ),
-    ),
   ]);
   const preview: Record<string, { text: string; at: Date } | undefined> = {};
-  memberships.forEach((m, i) => {
-    const last = lastMessages[i];
+  const lastByChannel = new Map(lastMessages.map((l) => [l.channelId, l]));
+  memberships.forEach((m) => {
+    const last = lastByChannel.get(m.channelId);
     if (!last) return;
     const who = last.author.id === user.id ? 'You' : last.author.name.split(' ')[0];
     const body = last.body.replace(/\s+/g, ' ').trim() || (last._count.files ? 'sent a file' : '');
@@ -94,7 +104,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
                     const n = unread[m.channel.id] ?? 0;
                     const Icon = m.channel.type === 'private' ? IconLock : IconHash;
                     return (
-                      <Link
+                      <Link prefetch={false}
                         key={m.channel.id}
                         href={`/chat/${m.channel.key}`}
                         className={clsx(
@@ -127,7 +137,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ key: s
                               {preview[m.channelId]?.text ?? 'No messages yet'}
                             </span>
                             {n > 0 && !active && (
-                              <span className="min-w-[18px] shrink-0 rounded-full bg-lime px-1.5 text-center text-[10.5px] font-bold text-lime-ink">
+                              <span className="min-w-[18px] shrink-0 rounded-full bg-accent px-1.5 text-center text-[10.5px] font-bold text-accent-ink">
                                 {n}
                               </span>
                             )}

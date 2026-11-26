@@ -77,7 +77,7 @@ export default async function SpeakersPage({
       )}
 
       <div className="chip-row mb-4 flex flex-wrap gap-2">
-        <Link
+        <Link prefetch={false}
           href="/speakers"
           className={
             !status
@@ -88,7 +88,7 @@ export default async function SpeakersPage({
           All
         </Link>
         {STATUS_ORDER.map((s) => (
-          <Link
+          <Link prefetch={false}
             key={s}
             href={`/speakers?status=${s}`}
             className={
@@ -109,7 +109,7 @@ export default async function SpeakersPage({
         {/* One card per speaker: two up on tablets, three on desktop. */}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {speakers.map((s: any) => (
-            <Link
+            <Link prefetch={false}
               key={s.id}
               href={`/speakers/${s.id}`}
               className="card group flex flex-col p-4 transition hover:shadow-[0_6px_20px_rgba(20,20,20,0.08)]"
@@ -132,7 +132,7 @@ export default async function SpeakersPage({
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                <Pill tone={s.speakerType === 'Keynote' ? 'lime' : 'neutral'} dot={s.speakerType !== 'Keynote'}>
+                <Pill tone={s.speakerType === 'Keynote' ? 'accent' : 'neutral'} dot={s.speakerType !== 'Keynote'}>
                   {s.speakerType}
                 </Pill>
                 <Pill tone={s.bio ? 'ok' : 'neutral'}>Bio</Pill>

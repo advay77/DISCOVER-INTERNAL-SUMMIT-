@@ -34,8 +34,8 @@ const TONES: Record<string, { box: string; dot: string }> = {
   bad: { box: 'border-transparent bg-brick-100 text-brick', dot: '#A62B2B' },
   brand: { box: 'border-transparent bg-brand-100 text-brand', dot: 'rgb(var(--brand))' },
   neutral: { box: 'border-transparent bg-panel text-ink-muted', dot: '#8F8F89' },
-  navy: { box: 'border-transparent bg-navy text-white', dot: '#E3F24A' },
-  lime: { box: 'border-transparent bg-lime text-lime-ink', dot: '#2A2E05' },
+  navy: { box: 'border-transparent bg-navy text-white', dot: '#8FC3EE' },
+  accent: { box: 'border-transparent bg-accent text-accent-ink', dot: '#FFFFFF' },
 };
 
 export function Pill({
@@ -185,7 +185,7 @@ export function Ring({
 
 /**
  * A counter: small label on top, a large figure underneath, an optional
- * hint or icon on the right. `highlight` paints it lime — use it for the one
+ * hint or icon on the right. `highlight` paints it accent — use it for the one
  * figure on a screen that should catch the eye.
  */
 export function StatTile({
@@ -217,20 +217,20 @@ export function StatTile({
     <div
       className={clsx(
         'flex h-full min-h-[112px] flex-col justify-between rounded-tile px-4 py-3.5 transition',
-        highlight ? 'bg-lime text-lime-ink' : 'bg-white shadow-card',
-        href && (highlight ? 'hover:bg-lime-600' : 'hover:ring-1 hover:ring-line-strong'),
+        highlight ? 'bg-accent text-accent-ink' : 'bg-white shadow-card',
+        href && (highlight ? 'hover:bg-accent-600' : 'hover:ring-1 hover:ring-line-strong'),
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className={clsx('truncate text-[12.5px] font-medium', highlight ? 'text-lime-ink/80' : 'text-ink-muted')}>
+        <span className={clsx('truncate text-[12.5px] font-medium', highlight ? 'text-accent-ink/80' : 'text-ink-muted')}>
           {label}
         </span>
-        {icon && <span className={clsx('shrink-0', highlight ? 'text-lime-ink' : text)}>{icon}</span>}
+        {icon && <span className={clsx('shrink-0', highlight ? 'text-accent-ink' : text)}>{icon}</span>}
       </div>
       <div className="mt-3 flex items-end justify-between gap-2">
         <span className="display text-[34px] leading-none">{value}</span>
         {hint && (
-          <span className={clsx('mb-0.5 whitespace-nowrap text-[11.5px] font-medium', highlight ? 'text-lime-ink/80' : 'text-ink-faint')}>
+          <span className={clsx('mb-0.5 whitespace-nowrap text-[11.5px] font-medium', highlight ? 'text-accent-ink/80' : 'text-ink-faint')}>
             {hint}
           </span>
         )}
@@ -239,7 +239,7 @@ export function StatTile({
   );
 
   return href ? (
-    <Link href={href} className="block h-full">
+    <Link prefetch={false} href={href} className="block h-full">
       {inner}
     </Link>
   ) : (

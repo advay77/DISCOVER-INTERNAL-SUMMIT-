@@ -42,7 +42,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
         }
         action={
           isAdmin && !isSelf ? (
-            <Link href="/admin?tab=people" className="text-[13px] font-semibold text-brand hover:underline">
+            <Link prefetch={false} href="/admin?tab=people" className="text-[13px] font-semibold text-brand hover:underline">
               All people
             </Link>
           ) : undefined

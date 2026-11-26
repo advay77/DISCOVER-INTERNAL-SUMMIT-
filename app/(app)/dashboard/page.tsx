@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { requireUser, can, scopeOf, scopeFilter } from '@/lib/authz';
 import { db } from '@/lib/db';
+import { currentEvent } from '@/lib/event';
 import clsx from 'clsx';
 import { Pill, StatTile, Avatar, StatusPill, Empty } from '@/components/ui';
 import { IconTask, IconAgenda, IconChat, IconArrow } from '@/components/icons';
@@ -24,127 +25,103 @@ export default async function Dashboard({
   const seeVendors = can(user, 'vendors:view');
   const seeAttendees = can(user, 'attendees:view');
 
-  const [
-    event,
-    total,
-    done,
-    overdue,
-    dueWeek,
-    mineOpen,
-    myTasks,
-    upcoming,
-    activity,
-    recentMessages,
-    upcomingEvents,
-    speakerTotal,
-    speakerConfirmed,
-    sponsorTotal,
-    sponsorConfirmed,
-    vendorTotal,
-    vendorSettled,
-    attendeeCount,
-    toChase,
-    speakerRows,
-    taskByStatus,
-    toChaseCount,
-  ] = await Promise.all([
-    db.event.findFirst({ where: { isCurrent: true } }),
-    db.task.count({ where: taskWhere }),
-    db.task.count({ where: { AND: [taskWhere, { status: 'done' }] } }),
-    db.task.count({
-      where: { AND: [taskWhere, { status: { not: 'done' }, dueDate: { lt: now } }] },
-    }),
-    db.task.count({
-      where: {
-        AND: [taskWhere, { status: { not: 'done' }, dueDate: { gte: now, lte: weekEnd } }],
-      },
-    }),
-    db.task.count({ where: { ownerId: user.id, status: { not: 'done' } } }),
-    db.task.findMany({
-      where: { ownerId: user.id, status: { not: 'done' } },
-      orderBy: [{ dueDate: 'asc' }],
-      take: 6,
-      select: {
-        id: true,
-        title: true,
-        category: true,
-        status: true,
-        dueDate: true,
-        workstream: { select: { color: true } },
-      },
-    }),
-    db.task.findMany({
-      where: { ...taskWhere, status: { not: 'done' }, dueDate: { not: null } },
-      orderBy: { dueDate: 'asc' },
-      take: 5,
-      select: { id: true, title: true, dueDate: true, owner: { select: { name: true } } },
-    }),
-    db.activityLog.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-      select: { id: true, summary: true, createdAt: true, actor: { select: { name: true } } },
-    }),
-    db.message.findMany({
-      where: { channelId: { not: null }, deletedAt: null },
-      orderBy: { createdAt: 'desc' },
-      take: 4,
-      select: {
-        id: true,
-        body: true,
-        createdAt: true,
-        author: { select: { name: true, accent: true } },
-        channel: { select: { key: true, name: true } },
-      },
-    }),
-    db.event.findMany({
-      where: {
-        endDate: { gte: now },
-        status: { not: 'cancelled' },
-        ...(scopeOf(user, 'finance:view') === 'none'
-          ? { OR: [{ workstreamId: null }, { workstream: { is: { restricted: false } } }] }
-          : {}),
-      },
-      orderBy: { startDate: 'asc' },
-      take: 4,
-      select: {
-        id: true,
-        name: true,
-        startDate: true,
-        venue: true,
-        kind: true,
-        workstream: { select: { name: true } },
-      },
-    }),
-    seeSpeakers ? db.speaker.count() : 0,
-    seeSpeakers ? db.speaker.count({ where: { confirmed: true } }) : 0,
-    seeSponsors ? db.sponsor.count() : 0,
-    seeSponsors ? db.sponsor.count({ where: { status: 'Confirmed' } }) : 0,
-    seeVendors ? db.vendor.count() : 0,
-    seeVendors
-      ? db.vendor.count({ where: { paymentStatus: { in: ['Paid', 'Deposit paid'] } } })
-      : 0,
-    seeAttendees ? db.attendee.count({ where: { status: 'Confirmed' } }) : 0,
-    seeSpeakers
-      ? db.speaker.findMany({
-          where: { status: { in: ['Invited', 'Responded'] } },
-          orderBy: [{ status: 'desc' }, { updatedAt: 'asc' }],
-          take: 4,
-          select: {
-            id: true,
-            name: true,
-            company: true,
-            status: true,
-            speakerType: true,
-            owner: { select: { name: true, accent: true } },
-          },
-        })
-      : [],
-    seeSpeakers
-      ? db.speaker.findMany({ select: { status: true, confirmed: true, bio: true, headshot: true } })
-      : [],
-    db.task.groupBy({ by: ['status'], where: taskWhere, _count: { _all: true } }),
-    seeSpeakers ? db.speaker.count({ where: { status: { in: ['Invited', 'Responded'] } } }) : 0,
-  ]);
+  // Few, wide queries instead of many narrow ones: on a hosted database each
+  // round-trip costs far more than reading a few dozen extra rows, so counts
+  // are worked out here from one list per table.
+  const [event, scopedTasks, activity, recentMessages, upcomingEvents, speakerRows, sponsorRows, vendorRows, attendeeCount] =
+    await Promise.all([
+      currentEvent(),
+      db.task.findMany({
+        where: taskWhere,
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          status: true,
+          dueDate: true,
+          ownerId: true,
+          workstream: { select: { color: true } },
+          owner: { select: { name: true } },
+        },
+      }),
+      db.activityLog.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: { id: true, summary: true, createdAt: true, actor: { select: { name: true } } },
+      }),
+      db.message.findMany({
+        where: { channelId: { not: null }, deletedAt: null },
+        orderBy: { createdAt: 'desc' },
+        take: 4,
+        select: {
+          id: true,
+          body: true,
+          createdAt: true,
+          author: { select: { name: true, accent: true } },
+          channel: { select: { key: true, name: true } },
+        },
+      }),
+      db.event.findMany({
+        where: {
+          endDate: { gte: now },
+          status: { not: 'cancelled' },
+          ...(scopeOf(user, 'finance:view') === 'none'
+            ? { OR: [{ workstreamId: null }, { workstream: { is: { restricted: false } } }] }
+            : {}),
+        },
+        orderBy: { startDate: 'asc' },
+        take: 4,
+        select: { id: true, name: true, startDate: true, venue: true, kind: true, workstream: { select: { name: true } } },
+      }),
+      seeSpeakers
+        ? db.speaker.findMany({
+            select: {
+              id: true,
+              name: true,
+              company: true,
+              status: true,
+              speakerType: true,
+              confirmed: true,
+              bio: true,
+              headshot: true,
+              updatedAt: true,
+              owner: { select: { name: true, accent: true } },
+            },
+          })
+        : [],
+      seeSponsors ? db.sponsor.findMany({ select: { status: true } }) : [],
+      seeVendors ? db.vendor.findMany({ select: { paymentStatus: true } }) : [],
+      seeAttendees ? db.attendee.count({ where: { status: 'Confirmed' } }) : 0,
+    ]);
+
+  // ---------------------------------------------------------- derived counts
+  const open = scopedTasks.filter((t) => t.status !== 'done');
+  const total = scopedTasks.length;
+  const done = total - open.length;
+  const overdue = open.filter((t) => t.dueDate && t.dueDate < now).length;
+  const dueWeek = open.filter((t) => t.dueDate && t.dueDate >= now && t.dueDate <= weekEnd).length;
+  const byDue = (a: { dueDate: Date | null }, b: { dueDate: Date | null }) =>
+    (a.dueDate ? +a.dueDate : Infinity) - (b.dueDate ? +b.dueDate : Infinity);
+  const mine = open.filter((t) => t.ownerId === user.id).sort(byDue);
+  const mineOpen = mine.length;
+  const myTasks = mine.slice(0, 6);
+  const upcoming = open.filter((t) => t.dueDate).sort(byDue).slice(0, 5);
+  const taskByStatus = ['todo', 'in_progress', 'review', 'done'].map((status) => ({
+    status,
+    _count: { _all: scopedTasks.filter((t) => t.status === status).length },
+  }));
+
+  const speakerTotal = speakerRows.length;
+  const speakerConfirmed = speakerRows.filter((s) => s.confirmed).length;
+  const chasing = speakerRows
+    .filter((s) => s.status === 'Invited' || s.status === 'Responded')
+    .sort((a, b) => (a.status === b.status ? +a.updatedAt - +b.updatedAt : a.status === 'Responded' ? -1 : 1));
+  const toChase = chasing.slice(0, 4);
+  const toChaseCount = chasing.length;
+  const sponsorTotal = sponsorRows.length;
+  const sponsorConfirmed = sponsorRows.filter((s) => s.status === 'Confirmed').length;
+  const vendorTotal = vendorRows.length;
+  const vendorSettled = vendorRows.filter((v) => ['Paid', 'Deposit paid'].includes(v.paymentStatus)).length;
 
   const countdown = event ? daysUntil(event.startDate) : 0;
   const progress = pct(done, total);
@@ -238,13 +215,13 @@ export default async function Dashboard({
               </>
             )}
             {event?.venue === 'To be confirmed' && (
-              <Link href="/admin" className="ml-1">
+              <Link prefetch={false} href="/admin" className="ml-1">
                 <Pill tone="warn">Dates &amp; venue not confirmed</Pill>
               </Link>
             )}
           </p>
         </div>
-        <Link href="/tasks" className="btn-primary py-2.5 pl-3 pr-5">
+        <Link prefetch={false} href="/tasks" className="btn-primary py-2.5 pl-3 pr-5">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15">
             <IconArrow size={13} />
           </span>
@@ -277,7 +254,7 @@ export default async function Dashboard({
           </div>
           <div className="flex items-center gap-1 rounded-full bg-panel p-1">
             {seeSpeakers && (
-              <Link
+              <Link prefetch={false}
                 href="/dashboard"
                 className={clsx(
                   'rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition',
@@ -287,7 +264,7 @@ export default async function Dashboard({
                 Speakers
               </Link>
             )}
-            <Link
+            <Link prefetch={false}
               href="/dashboard?pipeline=tasks"
               className={clsx(
                 'rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition',
@@ -296,7 +273,7 @@ export default async function Dashboard({
             >
               Tasks
             </Link>
-            <Link
+            <Link prefetch={false}
               href={showSpeakers ? '/speakers' : '/tasks'}
               className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-ink-muted hover:text-ink"
               aria-label="Open the full list"
@@ -319,7 +296,7 @@ export default async function Dashboard({
                   <span
                     className={clsx(
                       'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium',
-                      i === 0 ? 'bg-lime text-lime-ink' : last ? 'bg-navy text-white' : 'bg-white text-ink',
+                      i === 0 ? 'bg-accent text-accent-ink' : last ? 'bg-navy text-white' : 'bg-white text-ink',
                     )}
                   >
                     {!(i === 0 || last) && <span className="h-1.5 w-1.5 rounded-full bg-ink-faint" />}
@@ -329,7 +306,7 @@ export default async function Dashboard({
                 </div>
                 <div className="mt-3 flex h-[96px] items-end">
                   <div
-                    className={clsx('w-full rounded-xl', last ? 'bg-lime' : 'border border-line-strong')}
+                    className={clsx('w-full rounded-xl', last ? 'bg-accent' : 'border border-line-strong')}
                     style={{
                       height: last ? 18 : `${h}%`,
                       ...(last
@@ -356,7 +333,7 @@ export default async function Dashboard({
         <section className="card flex flex-col p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Next deadlines</h2>
-            <Link href="/tasks" className={linkCls}>
+            <Link prefetch={false} href="/tasks" className={linkCls}>
               All tasks <span aria-hidden>›</span>
             </Link>
           </div>
@@ -368,7 +345,7 @@ export default async function Dashboard({
                 const due = dueLabel(t.dueDate);
                 const [mon, day] = shortDate(t.dueDate).split(' ');
                 return (
-                  <Link key={t.id} href={`/tasks/${t.id}`} className="flex items-center gap-3 py-3 transition hover:opacity-80">
+                  <Link prefetch={false} key={t.id} href={`/tasks/${t.id}`} className="flex items-center gap-3 py-3 transition hover:opacity-80">
                     <span className="w-12 shrink-0">
                       <span className="block text-[17px] font-semibold leading-none text-ink">{day}</span>
                       <span className="mt-0.5 block text-[11px] font-medium uppercase text-ink-faint">{mon}</span>
@@ -392,7 +369,7 @@ export default async function Dashboard({
                 ['This week', '/tasks?filter=week'],
                 ['Done', '/tasks?filter=done'],
               ].map(([label, href]) => (
-                <Link
+                <Link prefetch={false}
                   key={href}
                   href={href}
                   className="rounded-full border border-dashed border-line-strong bg-white/60 px-3 py-1 text-[12px] font-medium text-ink-muted hover:border-ink/40 hover:text-ink"
@@ -412,7 +389,7 @@ export default async function Dashboard({
                 <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Speakers to chase</h2>
                 <p className="mt-0.5 text-[13px] text-ink-muted">Invited or replied, not yet confirmed</p>
               </div>
-              {toChaseCount > 0 && <Pill tone="lime" dot={false}>{toChaseCount} waiting</Pill>}
+              {toChaseCount > 0 && <Pill tone="accent" dot={false}>{toChaseCount} waiting</Pill>}
             </div>
             <div className="mt-3 space-y-2.5">
               {toChase.length === 0 ? (
@@ -428,7 +405,7 @@ export default async function Dashboard({
                           {sp.company ?? sp.speakerType}
                         </p>
                       </div>
-                      <Link href={`/speakers/${sp.id}`} className="btn-ghost btn-sm shrink-0 border-transparent">
+                      <Link prefetch={false} href={`/speakers/${sp.id}`} className="btn-ghost btn-sm shrink-0 border-transparent">
                         Open
                       </Link>
                     </div>
@@ -442,7 +419,7 @@ export default async function Dashboard({
                 ))
               )}
             </div>
-            <Link href="/speakers" className="mt-3 text-[13px] font-semibold text-ink hover:underline">
+            <Link prefetch={false} href="/speakers" className="mt-3 text-[13px] font-semibold text-ink hover:underline">
               Full pipeline ›
             </Link>
           </section>
@@ -464,7 +441,7 @@ export default async function Dashboard({
               <p className="text-[12.5px] text-ink-faint">Nothing scheduled.</p>
             ) : (
               upcomingEvents.slice(0, 3).map((e) => (
-                <Link key={e.id} href={`/events/${e.id}`} className="flex items-center justify-between gap-3 py-1.5">
+                <Link prefetch={false} key={e.id} href={`/events/${e.id}`} className="flex items-center justify-between gap-3 py-1.5">
                   <span className="truncate text-[13px] font-medium text-ink">{e.name}</span>
                   <span className="shrink-0 text-[12px] text-ink-faint">{shortDate(e.startDate)}</span>
                 </Link>
@@ -482,7 +459,7 @@ export default async function Dashboard({
               <p className="text-[12.5px] text-ink-faint">Quiet for now — new channel messages show up here.</p>
             ) : recentMessages.length > 0 ? (
               recentMessages.slice(0, 3).map((m) => (
-                <Link key={m.id} href={`/chat/${m.channel?.key}`} className="flex items-center justify-between gap-3 py-1.5">
+                <Link prefetch={false} key={m.id} href={`/chat/${m.channel?.key}`} className="flex items-center justify-between gap-3 py-1.5">
                   <span className="min-w-0 truncate text-[13px] text-ink">
                     <span className="font-medium">{m.author.name}</span>
                     <span className="text-ink-muted"> · {m.body}</span>
@@ -522,7 +499,7 @@ function MiniCard({
 }) {
   return (
     <section className="card p-4">
-      <Link href={href} className="flex items-center gap-2.5">
+      <Link prefetch={false} href={href} className="flex items-center gap-2.5">
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-panel text-ink">{icon}</span>
         <span className="flex-1 text-[14.5px] font-semibold text-ink">{title}</span>
         <span className="text-[13px] font-medium text-ink-muted">{count}</span>
@@ -547,7 +524,7 @@ function MyTasksCard({
       tasks.map((t) => {
         const due = dueLabel(t.dueDate);
         return (
-          <Link key={t.id} href={`/tasks/${t.id}`} className="flex items-center justify-between gap-3 py-1.5">
+          <Link prefetch={false} key={t.id} href={`/tasks/${t.id}`} className="flex items-center justify-between gap-3 py-1.5">
             <span className="flex min-w-0 items-center gap-2">
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: t.workstream?.color ?? '#8F8F89' }} />
               <span className="truncate text-[13px] font-medium text-ink">{t.title}</span>
@@ -574,7 +551,7 @@ function MyTasksCard({
     <section className="card p-4 sm:p-5">
       <div className="flex items-center justify-between">
         <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Your tasks</h2>
-        <Link href="/tasks?filter=mine" className="text-[13px] font-semibold text-ink hover:underline">
+        <Link prefetch={false} href="/tasks?filter=mine" className="text-[13px] font-semibold text-ink hover:underline">
           View all ›
         </Link>
       </div>

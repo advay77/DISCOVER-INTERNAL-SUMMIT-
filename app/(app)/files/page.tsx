@@ -133,7 +133,7 @@ export default async function FilesPage({
           {q && (
             <>
               {' '}matching “{q}” ·{' '}
-              <Link href={href({ q: undefined })} className="font-medium text-ink underline">
+              <Link prefetch={false} href={href({ q: undefined })} className="font-medium text-ink underline">
                 clear
               </Link>
             </>
@@ -194,7 +194,7 @@ export default async function FilesPage({
 
 function FolderCard({ name, count, active, href, color }: { name: string; count: number; active: boolean; href: string; color: string }) {
   return (
-    <Link
+    <Link prefetch={false}
       href={href}
       className={clsx(
         'flex items-center gap-2.5 rounded-tile p-3 transition',

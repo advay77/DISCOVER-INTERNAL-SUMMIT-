@@ -1,5 +1,6 @@
 import { requireCan, can } from '@/lib/authz';
 import { db } from '@/lib/db';
+import { currentEvent } from '@/lib/event';
 import { PageHeader, Avatar, Empty, StatTile } from '@/components/ui';
 import { relativeTime } from '@/lib/format';
 import { RetroForm } from './RetroForm';
@@ -12,7 +13,7 @@ const COLUMNS = [
 
 export default async function RetroPage() {
   const user = await requireCan('retro:view');
-  const event = await db.event.findFirst({ where: { isCurrent: true } });
+  const event = await currentEvent();
   if (!event) return <Empty title="No active cycle" />;
 
   const items = await db.retroItem.findMany({

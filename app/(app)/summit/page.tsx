@@ -2,6 +2,7 @@ import Link from 'next/link';
 import clsx from 'clsx';
 import { requireUser, can, scopeOf, scopeFilter, visibleWorkstreams } from '@/lib/authz';
 import { db } from '@/lib/db';
+import { currentEvent } from '@/lib/event';
 import { Empty, Pill, StatTile, Avatar } from '@/components/ui';
 import { IconAlert, IconArrow } from '@/components/icons';
 import { dateRange, daysUntil, dueLabel, money, pct, shortDate } from '@/lib/format';
@@ -14,7 +15,7 @@ import { KIND_LABEL, durationMinutes, toMinutes } from '@/lib/agenda';
  */
 export default async function SummitSummary() {
   const user = await requireUser();
-  const event = await db.event.findFirst({ where: { isCurrent: true } });
+  const event = await currentEvent();
   if (!event) return <Empty title="No active cycle" hint="Create one in Admin → Event." />;
 
   const seeTasks = can(user, 'tasks:view');
@@ -118,7 +119,7 @@ export default async function SummitSummary() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col justify-between rounded-tile bg-lime p-4 text-lime-ink">
+          <div className="flex flex-col justify-between rounded-tile bg-accent p-4 text-accent-ink">
             <p className="text-[12.5px] font-medium opacity-80">{countdown >= 0 ? 'Days to go' : 'Days since'}</p>
             <p className="display text-[48px] leading-none">{Math.abs(countdown)}</p>
           </div>
@@ -127,7 +128,7 @@ export default async function SummitSummary() {
             <div>
               <p className="display text-[48px] leading-none">{readiness}%</p>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/20">
-                <div className="h-full rounded-full bg-lime" style={{ width: `${readiness}%` }} />
+                <div className="h-full rounded-full bg-accent" style={{ width: `${readiness}%` }} />
               </div>
             </div>
           </div>
@@ -162,7 +163,7 @@ export default async function SummitSummary() {
           <section className="card p-5">
             <div className="flex items-center justify-between">
               <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">Workstreams</h2>
-              <Link href="/tasks" className="text-[13px] font-semibold text-ink hover:underline">
+              <Link prefetch={false} href="/tasks" className="text-[13px] font-semibold text-ink hover:underline">
                 All tasks ›
               </Link>
             </div>
@@ -173,7 +174,7 @@ export default async function SummitSummary() {
                 const late = list.filter((t) => t.status !== 'done' && t.dueDate && t.dueDate < now).length;
                 const p = pct(d, list.length);
                 return (
-                  <Link key={w.id} href={`/tasks?ws=${w.id}`} className="block rounded-xl p-1 transition hover:bg-panel">
+                  <Link prefetch={false} key={w.id} href={`/tasks?ws=${w.id}`} className="block rounded-xl p-1 transition hover:bg-panel">
                     <div className="flex items-center justify-between gap-3">
                       <span className="flex min-w-0 items-center gap-2">
                         <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: w.color }} />
@@ -207,7 +208,7 @@ export default async function SummitSummary() {
             <ul className="mt-3 space-y-2">
               {attention.map((a) => (
                 <li key={a.text}>
-                  <Link href={a.href} className="flex items-center gap-3 rounded-2xl bg-brass-100 px-4 py-3 text-[13.5px] text-brass transition hover:opacity-85">
+                  <Link prefetch={false} href={a.href} className="flex items-center gap-3 rounded-2xl bg-brass-100 px-4 py-3 text-[13.5px] text-brass transition hover:opacity-85">
                     <IconAlert size={15} className="shrink-0" />
                     <span className="flex-1 font-medium">{a.text}</span>
                     <IconArrow size={14} className="shrink-0" />
@@ -221,7 +222,7 @@ export default async function SummitSummary() {
               <p className="mt-5 text-[12.5px] font-medium text-ink-faint">Most overdue</p>
               <div className="mt-1 divide-y divide-line">
                 {overdue.map((t) => (
-                  <Link key={t.id} href={`/tasks/${t.id}`} className="flex items-center gap-3 py-2.5 hover:opacity-80">
+                  <Link prefetch={false} key={t.id} href={`/tasks/${t.id}`} className="flex items-center gap-3 py-2.5 hover:opacity-80">
                     {t.owner && <Avatar name={t.owner.name} accent={t.owner.accent} size={26} />}
                     <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-ink">{t.title}</span>
                     <Pill tone="bad">{dueLabel(t.dueDate).text}</Pill>
@@ -347,7 +348,7 @@ function Header({ title, href }: { title: string; href?: string }) {
     <div className="flex items-center justify-between">
       <h2 className="text-[19px] font-semibold tracking-[-0.015em] text-ink">{title}</h2>
       {href && (
-        <Link href={href} className="text-[13px] font-semibold text-ink hover:underline">
+        <Link prefetch={false} href={href} className="text-[13px] font-semibold text-ink hover:underline">
           Open ›
         </Link>
       )}

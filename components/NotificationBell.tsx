@@ -32,10 +32,16 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
     setCount(initialCount);
   }, [initialCount]);
 
+  // The server already rendered the count; poll only while the tab is in
+  // view, and refresh at once when the person comes back to it.
   useEffect(() => {
-    load();
-    const timer = setInterval(load, 15000);
-    return () => clearInterval(timer);
+    const tick = () => document.visibilityState === 'visible' && load();
+    const timer = setInterval(tick, 30000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', tick);
+    };
   }, [load]);
 
   async function mark(id?: string) {
@@ -57,7 +63,10 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (!open) load();
+          setOpen(!open);
+        }}
         className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink-muted hover:bg-paper hover:text-ink lg:h-11 lg:w-11 lg:bg-white lg:shadow-card"
         aria-label={count > 0 ? `${count} notifications` : 'Notifications'}
         aria-expanded={open}

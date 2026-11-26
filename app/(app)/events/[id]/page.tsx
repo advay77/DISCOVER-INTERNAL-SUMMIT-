@@ -38,7 +38,7 @@ export default async function EventDetail({ params }: { params: Promise<{ id: st
 
   return (
     <div className="mx-auto max-w-[1180px]">
-      <Link href="/events" className="mb-3 inline-block text-[13px] font-medium text-ink-muted hover:text-brand">
+      <Link prefetch={false} href="/events" className="mb-3 inline-block text-[13px] font-medium text-ink-muted hover:text-brand">
         ← All events
       </Link>
 
@@ -82,7 +82,7 @@ export default async function EventDetail({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:w-[320px]">
-          <div className="flex flex-col justify-between rounded-tile bg-lime p-4 text-lime-ink">
+          <div className="flex flex-col justify-between rounded-tile bg-accent p-4 text-accent-ink">
             <p className="text-[12.5px] font-medium opacity-80">{away >= 0 ? 'Days to go' : 'Days since'}</p>
             <p className="display mt-3 text-[40px] leading-none">{Math.abs(away)}</p>
           </div>
@@ -105,7 +105,7 @@ export default async function EventDetail({ params }: { params: Promise<{ id: st
           ]
             .filter(([, , cap]) => can(user, cap as string))
             .map(([label, href]) => (
-              <Link
+              <Link prefetch={false}
                 key={href as string}
                 href={href as string}
                 className="card px-4 py-3 text-[13.5px] font-semibold text-ink transition hover:border-line-strong"
@@ -185,7 +185,7 @@ export default async function EventDetail({ params }: { params: Promise<{ id: st
             title={`Tasks — ${done} of ${tasks.length} done`}
             bodyClass="divide-y divide-line p-0"
             action={
-              <Link href="/tasks" className="text-[13px] font-semibold text-brand hover:underline">
+              <Link prefetch={false} href="/tasks" className="text-[13px] font-semibold text-brand hover:underline">
                 All tasks →
               </Link>
             }
@@ -205,7 +205,7 @@ export default async function EventDetail({ params }: { params: Promise<{ id: st
                 {tasks.slice(0, 12).map((t) => {
                   const due = dueLabel(t.dueDate);
                   return (
-                    <Link
+                    <Link prefetch={false}
                       key={t.id}
                       href={`/tasks/${t.id}`}
                       className="flex items-center gap-3 px-5 py-3 hover:bg-panel/60"

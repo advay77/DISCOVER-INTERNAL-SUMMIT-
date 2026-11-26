@@ -67,7 +67,7 @@ export default async function SearchPage({
       {tasks.length > 0 && (
         <Card title="Tasks" bodyClass="divide-y divide-line p-0">
           {tasks.map((t) => (
-            <Link key={t.id} href={`/tasks/${t.id}`} className="block px-5 py-3 hover:bg-panel/60">
+            <Link prefetch={false} key={t.id} href={`/tasks/${t.id}`} className="block px-5 py-3 hover:bg-panel/60">
               <p className="text-[13.5px] font-medium text-ink">{t.title}</p>
               <p className="text-[12px] text-ink-faint">
                 {t.category}
@@ -81,7 +81,7 @@ export default async function SearchPage({
       {speakers.length > 0 && (
         <Card title="Speakers" bodyClass="divide-y divide-line p-0">
           {speakers.map((s) => (
-            <Link key={s.id} href={`/speakers/${s.id}`} className="block px-5 py-3 hover:bg-panel/60">
+            <Link prefetch={false} key={s.id} href={`/speakers/${s.id}`} className="block px-5 py-3 hover:bg-panel/60">
               <p className="text-[13.5px] font-medium text-ink">{s.name}</p>
               <p className="text-[12px] text-ink-faint">
                 {s.title} · {s.company}
@@ -109,7 +109,7 @@ export default async function SearchPage({
       {messages.length > 0 && (
         <Card title="Messages" bodyClass="divide-y divide-line p-0">
           {messages.map((m) => (
-            <Link
+            <Link prefetch={false}
               key={m.id}
               href={m.channel ? `/chat/${m.channel.key}` : '/chat'}
               className="block px-5 py-3 hover:bg-panel/60"

@@ -1,5 +1,11 @@
 import type { Metadata } from 'next';
+import { Inter, Inter_Tight } from 'next/font/google';
 import './globals.css';
+
+// Self-hosted at build time: no request to Google at page load, no
+// render-blocking stylesheet, and the files are cached with the app.
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
+const interTight = Inter_Tight({ subsets: ['latin'], weight: ['400', '500', '600'], display: 'swap', variable: '--font-inter-tight' });
 
 export const metadata: Metadata = {
   title: 'DISCOVER OS — Summit Command Center',
@@ -8,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${interTight.variable}`}>
       <head>
         {/* Apply the saved theme before first paint. */}
         <script
@@ -16,12 +22,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html:
               "(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}})()",
           }}
-        />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600&display=swap"
-          rel="stylesheet"
         />
       </head>
       <body>{children}</body>

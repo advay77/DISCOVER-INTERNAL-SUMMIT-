@@ -27,7 +27,7 @@ export function Sidebar({
   return (
     <aside className="sticky top-3 m-3 mr-0 hidden h-[calc(100vh-24px)] w-[236px] shrink-0 flex-col rounded-[24px] bg-white shadow-card lg:flex">
       <div className="px-5 pb-4 pt-5">
-        <Link href="/dashboard" aria-label="DISCOVER home">
+        <Link prefetch={false} href="/dashboard" aria-label="DISCOVER home">
           <Logo tone="dark" size="md" />
         </Link>
       </div>
@@ -56,7 +56,7 @@ export function Sidebar({
                   const active = path === item.href || path.startsWith(item.href + '/');
                   const Icon = NAV_ICONS[item.icon];
                   return (
-                    <Link
+                    <Link prefetch={false}
                       key={item.href}
                       href={item.href}
                       className={clsx('nav-item', active && 'nav-item-active')}
@@ -84,9 +84,9 @@ export function Sidebar({
       {/* The one thing that needs you, in the accent colour. */}
       <div className="p-3">
         {overdue > 0 ? (
-          <div className="rounded-[18px] bg-lime p-3 text-lime-ink">
+          <div className="rounded-[18px] bg-accent p-3 text-accent-ink">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-lime-ink text-lime">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-ink text-accent">
                 <IconAlert size={15} />
               </span>
               <span className="min-w-0">
@@ -94,9 +94,9 @@ export function Sidebar({
                 <span className="block text-[11.5px] leading-tight opacity-75">Past their due date</span>
               </span>
             </div>
-            <Link
+            <Link prefetch={false}
               href="/tasks?filter=overdue"
-              className="mt-3 flex items-center justify-between rounded-full bg-snow px-3.5 py-2 text-[12.5px] font-semibold text-lime-ink hover:bg-snow/80"
+              className="mt-3 flex items-center justify-between rounded-full bg-snow px-3.5 py-2 text-[12.5px] font-semibold text-accent hover:bg-snow/90"
             >
               {overdue} overdue {overdue === 1 ? 'task' : 'tasks'}
               <span aria-hidden>›</span>

@@ -39,7 +39,7 @@ export function MobileTabBar({ nav }: { nav: NavEntry[] }) {
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="More">
           <button
-            className="absolute inset-0 bg-navy/40 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-navy/40-[2px]"
             aria-label="Close"
             onClick={() => setOpen(false)}
           />
@@ -65,7 +65,7 @@ export function MobileTabBar({ nav }: { nav: NavEntry[] }) {
                       const Icon = NAV_ICONS[n.icon];
                       const active = isActive(n.href);
                       return (
-                        <Link
+                        <Link prefetch={false}
                           key={n.href}
                           href={n.href}
                           className={clsx(
@@ -92,7 +92,7 @@ export function MobileTabBar({ nav }: { nav: NavEntry[] }) {
       )}
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] lg:hidden"
         aria-label="Main"
       >
         <div className="mx-auto grid max-w-xl grid-cols-5">
@@ -100,7 +100,7 @@ export function MobileTabBar({ nav }: { nav: NavEntry[] }) {
             const Icon = NAV_ICONS[n.icon];
             const active = isActive(n.href);
             return (
-              <Link
+              <Link prefetch={false}
                 key={n.href}
                 href={n.href}
                 className={clsx(

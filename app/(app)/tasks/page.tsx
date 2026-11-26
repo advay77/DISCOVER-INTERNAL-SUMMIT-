@@ -45,10 +45,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   if (q) and.push({ OR: [{ title: icontains(q) }, { category: icontains(q) }] });
   const where = { AND: and };
 
-  const count = (extra: any) => db.task.count({ where: { AND: [base, extra] } });
-
-  const [tasks, workstreams, people, total, done, nOverdue, nWeek, nUnassigned, nNoDate, nHigh, nMine] =
-    await Promise.all([
+  const [tasks, workstreams, people, all] = await Promise.all([
       db.task.findMany({
         where,
         orderBy: [{ status: 'asc' }, { dueDate: 'asc' }],
@@ -70,15 +67,19 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
         select: { id: true, name: true, color: true },
       }),
       db.user.findMany({ where: { isActive: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
-      count({}),
-      count(QUICK.done),
-      count(QUICK.overdue),
-      count(QUICK.week),
-      count(QUICK.unassigned),
-      count(QUICK.nodate),
-      count(QUICK.high),
-      count(QUICK.mine),
+      // Every quick-filter count from one narrow list instead of eight queries.
+      db.task.findMany({ where: base, select: { status: true, dueDate: true, ownerId: true, priority: true } }),
     ]);
+
+  const openAll = all.filter((t) => t.status !== 'done');
+  const total = all.length;
+  const done = total - openAll.length;
+  const nOverdue = openAll.filter((t) => t.dueDate && t.dueDate < now).length;
+  const nWeek = openAll.filter((t) => t.dueDate && t.dueDate >= now && t.dueDate <= weekEnd).length;
+  const nUnassigned = openAll.filter((t) => !t.ownerId).length;
+  const nNoDate = openAll.filter((t) => !t.dueDate).length;
+  const nHigh = openAll.filter((t) => t.priority === 'high').length;
+  const nMine = openAll.filter((t) => t.ownerId === user.id).length;
 
   const canEdit = scopeOf(user, 'tasks:edit') !== 'none';
   const open = total - done;
@@ -149,7 +150,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
           icon={<IconCheck size={17} />}
           label="Completed"
           value={`${donePct}%`}
-          badge={<Pill tone="lime" dot={false}>{done} done</Pill>}
+          badge={<Pill tone="accent" dot={false}>{done} done</Pill>}
           href={href({ filter: 'done' })}
         />
       </section>
@@ -158,15 +159,15 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       <div className="space-y-2.5">
         <div className="flex flex-wrap items-center gap-2">
           <div className="chip-row flex w-full flex-wrap items-center gap-2 lg:w-auto lg:flex-1">
-            <Link href={href({ filter: undefined, ws: undefined })} className={chip(!filter && !ws)}>
+            <Link prefetch={false} href={href({ filter: undefined, ws: undefined })} className={chip(!filter && !ws)}>
               Everyone
             </Link>
-            <Link href={href({ filter: filter === 'mine' ? undefined : 'mine' })} className={chip(filter === 'mine')}>
+            <Link prefetch={false} href={href({ filter: filter === 'mine' ? undefined : 'mine' })} className={chip(filter === 'mine')}>
               My tasks {count_(filter === 'mine', nMine)}
             </Link>
             <span className="mx-0.5 hidden h-5 w-px bg-line-strong sm:block" />
             {workstreams.map((w) => (
-              <Link key={w.id} href={href({ ws: ws === w.id ? undefined : w.id })} className={chip(ws === w.id)}>
+              <Link prefetch={false} key={w.id} href={href({ ws: ws === w.id ? undefined : w.id })} className={chip(ws === w.id)}>
                 <span className="h-2 w-2 rounded-full" style={{ background: w.color }} />
                 {w.name}
               </Link>
@@ -193,7 +194,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
             {quick.map((f) => {
               const active = filter === f.key;
               return (
-                <Link key={f.key} href={href({ filter: active ? undefined : f.key })} className={chip(active)}>
+                <Link prefetch={false} key={f.key} href={href({ filter: active ? undefined : f.key })} className={chip(active)}>
                   {f.label} {count_(active, f.n, f.alert)}
                 </Link>
               );
@@ -204,7 +205,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
             {q && (
               <>
                 {' '}for “{q}” ·{' '}
-                <Link href={href({ q: undefined })} className="font-medium text-ink underline">
+                <Link prefetch={false} href={href({ q: undefined })} className="font-medium text-ink underline">
                   clear
                 </Link>
               </>
@@ -212,7 +213,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
           </span>
           <span className="flex rounded-full bg-white p-1 shadow-card">
             {['board', 'list'].map((v) => (
-              <Link
+              <Link prefetch={false}
                 key={v}
                 href={href({ view: v === 'board' ? undefined : v })}
                 className={clsx(
@@ -251,7 +252,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
                 return (
                   <tr key={t.id} className="hover:bg-panel">
                     <td className="td">
-                      <Link href={`/tasks/${t.id}`} className="font-semibold text-ink hover:underline">
+                      <Link prefetch={false} href={`/tasks/${t.id}`} className="font-semibold text-ink hover:underline">
                         {t.title}
                       </Link>
                       <div className="text-[12px] text-ink-faint">{t.category}</div>
@@ -346,7 +347,7 @@ function Stat({
     </div>
   );
   return href ? (
-    <Link href={href} className="block rounded-xl transition hover:opacity-80">
+    <Link prefetch={false} href={href} className="block rounded-xl transition hover:opacity-80">
       {inner}
     </Link>
   ) : (

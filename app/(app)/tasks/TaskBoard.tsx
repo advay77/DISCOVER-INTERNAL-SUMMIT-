@@ -112,7 +112,7 @@ export function TaskBoard({
             className={clsx(
               'flex w-[86%] shrink-0 snap-start flex-col rounded-[20px] p-2 transition sm:w-[60%] md:w-auto',
               isDone ? 'bg-forest-100' : 'bg-white/55 ring-1 ring-line',
-              over === col.key && 'ring-2 ring-lime',
+              over === col.key && 'ring-2 ring-accent',
             )}
           >
             <header className="flex items-center justify-between gap-2 px-2 pb-2 pt-1.5">
@@ -233,7 +233,7 @@ function TaskCard({
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <Link
+          <Link prefetch={false}
             href={`/tasks/${t.id}`}
             className={clsx(
               'block text-[13.5px] font-semibold leading-snug hover:underline',
@@ -288,7 +288,7 @@ function TaskCard({
             aria-label={`Move “${t.title}”`}
             value={t.status}
             onChange={(e) => onMove(t.id, e.target.value)}
-            className="h-7 max-w-[7.5rem] shrink-0 cursor-pointer rounded-full border border-line bg-panel px-2 text-[11.5px] font-medium text-ink-muted outline-none hover:text-ink focus:ring-2 focus:ring-lime/60 [@media(hover:hover)]:lg:opacity-0 [@media(hover:hover)]:lg:focus:opacity-100 [@media(hover:hover)]:lg:group-hover:opacity-100"
+            className="h-7 max-w-[7.5rem] shrink-0 cursor-pointer rounded-full border border-line bg-panel px-2 text-[11.5px] font-medium text-ink-muted outline-none hover:text-ink focus:ring-2 focus:ring-accent/60 [@media(hover:hover)]:lg:opacity-0 [@media(hover:hover)]:lg:focus:opacity-100 [@media(hover:hover)]:lg:group-hover:opacity-100"
           >
             {columns.map((c) => (
               <option key={c.key} value={c.key}>

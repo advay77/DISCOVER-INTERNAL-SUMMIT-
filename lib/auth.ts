@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { cookies, headers } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
@@ -93,11 +94,16 @@ async function loadUser(id: string, epoch: number) {
   return user;
 }
 
-export async function currentUser() {
+/**
+ * The signed-in person. Wrapped in React's cache, so the layout, the page and
+ * every component in one request share a single lookup instead of each
+ * repeating it — on a hosted database every round-trip counts.
+ */
+export const currentUser = cache(async () => {
   const token = await readToken();
   if (!token) return null;
   return loadUser(token.uid, token.epoch);
-}
+});
 
 export async function signIn(email: string, password: string) {
   const clean = email.toLowerCase().trim().slice(0, 200);

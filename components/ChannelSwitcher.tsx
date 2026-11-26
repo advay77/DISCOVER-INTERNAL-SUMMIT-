@@ -54,7 +54,7 @@ export function ChannelSwitcher({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end bg-navy/35 backdrop-blur-sm sm:items-center sm:justify-center sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-end bg-navy/35 sm:items-center sm:justify-center sm:p-4">
           <div className="max-h-[80vh] w-full overflow-y-auto rounded-t-[10px] border border-line bg-white sm:max-w-sm sm:rounded-2xl">
             <div className="sticky top-0 flex items-center justify-between border-b border-line bg-white px-4 py-3">
               <p className="text-[14px] font-semibold text-ink">Conversations</p>

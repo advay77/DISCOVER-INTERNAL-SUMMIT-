@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { requireUser, can } from '@/lib/authz';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
+import { currentEvent } from '@/lib/event';
 import { PageHeader, Card, Avatar, Pill, StatTile } from '@/components/ui';
 import { CAPABILITIES, CAPABILITY_GROUPS } from '@/lib/capabilities';
 import { relativeTime, longDate } from '@/lib/format';
@@ -26,7 +27,7 @@ export default async function AdminPage({
     db.role.findMany({ orderBy: { level: 'asc' }, include: { permissions: true, users: true } }),
     db.user.findMany({ orderBy: [{ role: { level: 'asc' } }, { name: 'asc' }], include: { role: true, memberships: { include: { workstream: true } } } }),
     db.workstream.findMany({ orderBy: { order: 'asc' }, include: { _count: { select: { members: true } } } }),
-    db.event.findFirst({ where: { isCurrent: true } }),
+    currentEvent(),
     db.auditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 25, include: { actor: true } }),
     db.channel.findMany({
       orderBy: [{ type: 'asc' }, { name: 'asc' }],
@@ -68,7 +69,7 @@ export default async function AdminPage({
 
       <div className="mb-5 flex flex-wrap gap-2">
         {tabs.map((t) => (
-          <Link
+          <Link prefetch={false}
             key={t.key}
             href={`/admin?tab=${t.key}`}
             className={
@@ -196,7 +197,7 @@ export default async function AdminPage({
               {channels.map((c) => (
                 <tr key={c.id} className="hover:bg-panel/60">
                   <td className="td">
-                    <Link href={`/chat/${c.key}`} className="font-medium text-ink hover:text-brand">
+                    <Link prefetch={false} href={`/chat/${c.key}`} className="font-medium text-ink hover:text-brand">
                       #{c.name}
                     </Link>
                     {c.purpose && <div className="text-[11.5px] text-ink-faint">{c.purpose}</div>}
