@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { requireUser, can, scopeFilter, restrictionFilter } from '@/lib/authz';
-import { db } from '@/lib/db';
+import { db, icontains } from '@/lib/db';
 import { PageHeader, Card, Empty, Pill, Avatar } from '@/components/ui';
 import { relativeTime } from '@/lib/format';
 
@@ -28,24 +28,24 @@ export default async function SearchPage({
   const [tasks, speakers, people, messages] = await Promise.all([
     can(user, 'tasks:view')
       ? db.task.findMany({
-          where: { AND: [taskWhere, { title: { contains: term } }] },
+          where: { AND: [taskWhere, { title: icontains(term) }] },
           take: 12,
           include: { owner: true },
         })
       : [],
     can(user, 'speakers:view')
       ? db.speaker.findMany({
-          where: { OR: [{ name: { contains: term } }, { company: { contains: term } }, { topicFit: { contains: term } }] },
+          where: { OR: [{ name: icontains(term) }, { company: icontains(term) }, { topicFit: icontains(term) }] },
           take: 10,
         })
       : [],
     can(user, 'team:view')
-      ? db.user.findMany({ where: { name: { contains: term }, isActive: true }, take: 8, include: { role: true } })
+      ? db.user.findMany({ where: { name: icontains(term), isActive: true }, take: 8, include: { role: true } })
       : [],
     can(user, 'chat:use')
       ? db.message.findMany({
           where: {
-            body: { contains: term },
+            body: icontains(term),
             deletedAt: null,
             channel: { members: { some: { userId: user.id } } },
           },

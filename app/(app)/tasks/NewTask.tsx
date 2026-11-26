@@ -19,9 +19,20 @@ const CATEGORIES = [
 export function NewTask({
   workstreams,
   people,
+  currentUserId,
+  status = 'todo',
+  variant = 'primary',
+  label,
 }: {
   workstreams: { id: string; name: string }[];
   people: { id: string; name: string }[];
+  /** Pre-selects the person creating the task as its owner. */
+  currentUserId?: string;
+  /** The column the task lands in. */
+  status?: string;
+  /** `column` renders the quiet "+ Add task" button at the foot of a board column. */
+  variant?: 'primary' | 'column';
+  label?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,9 +41,19 @@ export function NewTask({
 
   return (
     <>
-      <button className="btn-primary" onClick={() => setOpen(true)}>
-        + New task
-      </button>
+      {variant === 'column' ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="w-full rounded-xl py-2 text-[13px] font-medium text-ink-muted transition hover:bg-white/70 hover:text-ink"
+        >
+          + {label ?? 'Add task'}
+        </button>
+      ) : (
+        <button className="btn-primary" onClick={() => setOpen(true)}>
+          + {label ?? 'New task'}
+        </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/35 p-4 py-10 backdrop-blur-sm">
@@ -58,6 +79,7 @@ export function NewTask({
               }
               className="space-y-3.5"
             >
+              <input type="hidden" name="status" value={status} />
               <div>
                 <label className="label">Title</label>
                 <input name="title" className="input mt-1.5" placeholder="What needs doing?" required />
@@ -89,7 +111,7 @@ export function NewTask({
                 </div>
                 <div>
                   <label className="label">Owner</label>
-                  <select name="ownerId" className="input mt-1.5">
+                  <select name="ownerId" className="input mt-1.5" defaultValue={currentUserId}>
                     {people.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}

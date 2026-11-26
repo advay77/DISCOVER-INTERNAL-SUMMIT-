@@ -17,6 +17,14 @@ import path from 'node:path';
 const RAW_URL = process.env.DATABASE_URL ?? '';
 const HAS_POSTGRES = RAW_URL.startsWith('postgres');
 
+/**
+ * A text filter that ignores letter case on both engines. SQLite's LIKE already
+ * does; Postgres needs `mode: 'insensitive'`, which the SQLite client rejects.
+ */
+export function icontains(term: string): { contains: string } {
+  return (HAS_POSTGRES ? { contains: term, mode: 'insensitive' } : { contains: term }) as { contains: string };
+}
+
 /** Hosted with no Postgres → demo. Local development is never demo. */
 export const IS_DEMO = !HAS_POSTGRES && (!!process.env.VERCEL || RAW_URL === '');
 

@@ -89,7 +89,7 @@ export async function createTask(data: FormData) {
       description: optionalText(data.get('description'), BOUND.notes),
       category: text(data.get('category'), BOUND.shortText) || 'Summit Logistics',
       priority: oneOf(data.get('priority'), STATUSES.priority, 'medium'),
-      status: 'todo',
+      status: oneOf(data.get('status'), STATUSES.task, 'todo'),
       dueDate: validDate(data.get('dueDate')),
       workstreamId: validId(data.get('workstreamId')),
       ownerId: validId(data.get('ownerId')) ?? user.id,
