@@ -43,7 +43,7 @@ export default async function LoginPage() {
             the work rather than scattered across inboxes and group chats.
           </p>
 
-          <p className="mt-10 border-l-2 border-brass pl-5 text-[13.5px] leading-relaxed text-white/70">
+          <p className="mt-10 border-l-2 border-lime pl-5 text-[13.5px] leading-relaxed text-white/70">
             What you can see follows what you do. The President sets the rest.
           </p>
         </div>
@@ -66,12 +66,12 @@ export default async function LoginPage() {
           <h2 className="display mt-3 text-[32px] leading-tight text-ink">Sign in</h2>
 
           {IS_DEMO && (
-            <div className="mt-5 rounded-[5px] border-l-2 border-brass bg-brass-100 px-4 py-3">
+            <div className="mt-5 rounded-xl border-l-2 border-brass bg-brass-100 px-4 py-3">
               <p className="text-[12.5px] font-semibold text-ink">Demo</p>
               <p className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">
                 Everything works, and anything you change here resets on its own. Sign in with any
                 address below and the password{' '}
-                <code className="rounded-[2px] bg-white px-1 py-0.5 font-semibold text-ink">
+                <code className="rounded bg-white px-1 py-0.5 font-semibold text-ink">
                   discover-demo
                 </code>
                 .

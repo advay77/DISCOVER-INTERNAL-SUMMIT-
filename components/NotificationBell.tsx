@@ -58,20 +58,20 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink-muted hover:bg-paper hover:text-ink lg:h-8 lg:w-8 lg:rounded-[4px]"
+        className="relative flex h-10 w-10 items-center justify-center rounded-full text-ink-muted hover:bg-paper hover:text-ink lg:h-11 lg:w-11 lg:bg-white lg:shadow-card"
         aria-label={count > 0 ? `${count} notifications` : 'Notifications'}
         aria-expanded={open}
       >
         <IconBell size={17} />
         {count > 0 && (
-          <span className="absolute right-0.5 top-0.5 h-[7px] w-[7px] rounded-full bg-brick ring-2 ring-white" />
+          <span className="absolute right-2 top-2 h-[7px] w-[7px] rounded-full bg-brick ring-2 ring-white" />
         )}
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-20 mt-1.5 w-[320px] overflow-hidden rounded-[5px] border border-line bg-white shadow-pop">
+          <div className="absolute right-0 z-20 mt-1.5 w-[320px] overflow-hidden rounded-[18px] border border-line bg-white shadow-pop">
             <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
               <p className="text-[13px] font-semibold text-ink">Notifications</p>
               {count > 0 && (

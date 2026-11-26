@@ -125,7 +125,7 @@ export default async function EventsPage({
         <Link
           href="/events"
           className={clsx(
-            'rounded-[4px] px-3 py-1.5 text-[13px] font-medium',
+            'rounded-lg px-3 py-1.5 text-[13px] font-medium',
             !kind ? 'bg-navy font-semibold text-white' : 'border border-line bg-white text-ink-muted hover:text-ink',
           )}
         >
@@ -136,7 +136,7 @@ export default async function EventsPage({
             key={k}
             href={`/events?kind=${k}`}
             className={clsx(
-              'rounded-[4px] px-3 py-1.5 text-[13px] font-medium',
+              'rounded-lg px-3 py-1.5 text-[13px] font-medium',
               kind === k ? 'bg-navy font-semibold text-white' : 'border border-line bg-white text-ink-muted hover:text-ink',
             )}
           >

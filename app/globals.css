@@ -19,56 +19,63 @@ h3 {
 }
 
 @layer components {
-  /* Structure comes from hairlines, not shadows. */
+  /* White rounded panels on a warm grey canvas. */
   .card {
-    @apply rounded-card border border-line bg-white;
+    @apply rounded-card bg-white shadow-card;
   }
   .card-pad {
     @apply card p-5;
   }
+  /* A panel nested inside a card: soft grey, no border. */
+  .subcard {
+    @apply rounded-tile bg-panel;
+  }
 
   .label {
-    @apply text-2xs font-semibold uppercase tracking-label text-ink-faint;
+    @apply text-[11.5px] font-medium text-ink-faint;
   }
 
   .display {
-    @apply font-display font-normal tracking-[-0.015em];
+    @apply font-display font-medium tracking-[-0.025em];
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-[5px] px-3.5 py-2 text-[13px] font-semibold transition;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition;
   }
   .btn-primary {
     @apply btn bg-navy text-white hover:bg-navy-700 disabled:opacity-40;
   }
   .btn-ghost {
-    @apply btn border border-line-strong bg-white text-ink hover:border-navy hover:bg-paper;
+    @apply btn border border-line-strong bg-white text-ink hover:border-ink/40 hover:bg-panel;
+  }
+  .btn-lime {
+    @apply btn bg-lime text-lime-ink hover:bg-lime-600;
   }
   .btn-sm {
-    @apply px-2.5 py-1.5 text-[12.5px];
+    @apply px-3 py-1.5 text-[12.5px];
   }
 
   .input {
-    @apply w-full rounded-[5px] border border-line-strong bg-white px-3 py-2 text-[13.5px] outline-none transition placeholder:text-ink-faint focus:border-navy focus:ring-1 focus:ring-navy/25;
+    @apply w-full rounded-xl border border-line-strong bg-white px-3.5 py-2 text-[13.5px] outline-none transition placeholder:text-ink-faint focus:border-ink/50 focus:ring-2 focus:ring-lime/60;
   }
 
-  /* A tag, not a candy pill: hairline box with a status dot. */
+  /* Soft rounded chip with a status dot. */
   .pill {
-    @apply inline-flex items-center gap-1.5 rounded-[3px] border px-1.5 py-[3px] text-2xs font-semibold uppercase tracking-[0.05em];
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-[3px] text-[11.5px] font-medium;
   }
 
   .nav-item {
-    @apply relative flex items-center gap-2.5 border-l-2 border-transparent py-[5px] pl-3 pr-2 text-[12.5px] font-medium text-white/55 transition hover:border-white/25 hover:text-white;
+    @apply relative flex items-center gap-3 rounded-full px-3.5 py-[7px] text-[13.5px] font-medium text-ink-muted transition hover:bg-panel hover:text-ink;
   }
   .nav-item-active {
-    @apply border-brass bg-white/[0.06] font-semibold text-white hover:border-brass hover:text-white;
+    @apply bg-navy text-white hover:bg-navy hover:text-white;
   }
 
   .th {
-    @apply px-4 py-2 text-left text-2xs font-semibold uppercase tracking-label text-ink-faint;
+    @apply px-4 py-2.5 text-left text-[11.5px] font-medium text-ink-faint;
   }
   .td {
-    @apply px-4 py-2.5 align-middle text-[13px];
+    @apply px-4 py-3 align-middle text-[13px];
   }
 
   .rule {
@@ -81,8 +88,8 @@ h3 {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #c9cbc5;
-  border-radius: 0;
+  background: #d3d0c8;
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;

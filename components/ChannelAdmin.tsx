@@ -72,7 +72,7 @@ export function NewChannel({ canCreate, variant = 'icon' }: { canCreate: boolean
         className={
           variant === 'button'
             ? 'btn-primary'
-            : 'rounded-[3px] p-0.5 text-ink-faint transition hover:bg-line hover:text-ink'
+            : 'rounded-md p-0.5 text-ink-faint transition hover:bg-line hover:text-ink'
         }
         title="Create a channel"
         aria-label="Create a channel"
@@ -98,7 +98,7 @@ export function NewChannel({ canCreate, variant = 'icon' }: { canCreate: boolean
             <div className="space-y-4">
               <div>
                 <label className="label">Name</label>
-                <div className="mt-1.5 flex items-center gap-2 rounded-[5px] border border-line-strong px-3 focus-within:border-navy">
+                <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-line-strong px-3 focus-within:border-navy">
                   <IconHash size={15} className="text-ink-faint" />
                   <input
                     value={name}
@@ -123,7 +123,7 @@ export function NewChannel({ canCreate, variant = 'icon' }: { canCreate: boolean
 
               <div>
                 <label className="label">Visibility</label>
-                <div className="mt-1.5 grid grid-cols-2 overflow-hidden rounded-[5px] border border-line-strong">
+                <div className="mt-1.5 grid grid-cols-2 overflow-hidden rounded-xl border border-line-strong">
                   {(['public', 'private'] as const).map((t, i) => (
                     <button
                       key={t}
@@ -155,7 +155,7 @@ export function NewChannel({ canCreate, variant = 'icon' }: { canCreate: boolean
                   </span>
                 </div>
 
-                <div className="mt-1.5 flex items-center gap-2 rounded-[5px] border border-line-strong px-3">
+                <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-line-strong px-3">
                   <IconSearch size={14} className="text-ink-faint" />
                   <input
                     value={filter}
@@ -165,7 +165,7 @@ export function NewChannel({ canCreate, variant = 'icon' }: { canCreate: boolean
                   />
                 </div>
 
-                <div className="mt-2 max-h-52 divide-y divide-line overflow-y-auto rounded-[5px] border border-line">
+                <div className="mt-2 max-h-52 divide-y divide-line overflow-y-auto rounded-xl border border-line">
                   {shown.map((p) => {
                     const on = picked.includes(p.id);
                     return (
@@ -190,7 +190,7 @@ export function NewChannel({ canCreate, variant = 'icon' }: { canCreate: boolean
                         </span>
                         <span
                           className={clsx(
-                            'flex h-4 w-4 items-center justify-center rounded-[3px] border text-[10px] font-bold',
+                            'flex h-4 w-4 items-center justify-center rounded-md border text-[10px] font-bold',
                             on ? 'border-brand bg-brand text-white' : 'border-line-strong text-transparent',
                           )}
                         >
@@ -300,7 +300,7 @@ export function ChannelMembers({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-[3px] border border-line px-2 py-1 text-2xs font-semibold uppercase tracking-label text-ink-muted transition hover:border-line-strong hover:text-ink"
+        className="flex items-center gap-1.5 rounded-md border border-line px-2 py-1 text-2xs font-semibold uppercase tracking-label text-ink-muted transition hover:border-line-strong hover:text-ink"
       >
         {memberCount} members
       </button>
@@ -321,12 +321,12 @@ export function ChannelMembers({
             </div>
 
             {error && (
-              <p className="mb-3 rounded-[4px] border border-brick/30 bg-brick-100 px-3 py-2 text-[12.5px] font-medium text-brick">
+              <p className="mb-3 rounded-lg border border-brick/30 bg-brick-100 px-3 py-2 text-[12.5px] font-medium text-brick">
                 {error}
               </p>
             )}
 
-            <div className="max-h-56 divide-y divide-line overflow-y-auto rounded-[5px] border border-line">
+            <div className="max-h-56 divide-y divide-line overflow-y-auto rounded-xl border border-line">
               {(data?.members ?? []).map((p) => (
                 <div key={p.id} className="flex items-center gap-3 px-3 py-2">
                   <Avatar name={p.name} accent={p.accent} size={26} />
@@ -352,7 +352,7 @@ export function ChannelMembers({
 
             <div className="mt-5">
               <label className="label">Add people</label>
-              <div className="mt-1.5 flex items-center gap-2 rounded-[5px] border border-line-strong px-3">
+              <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-line-strong px-3">
                 <IconSearch size={14} className="text-ink-faint" />
                 <input
                   value={filter}
@@ -362,7 +362,7 @@ export function ChannelMembers({
                 />
               </div>
 
-              <div className="mt-2 max-h-44 divide-y divide-line overflow-y-auto rounded-[5px] border border-line">
+              <div className="mt-2 max-h-44 divide-y divide-line overflow-y-auto rounded-xl border border-line">
                 {candidates.map((p) => {
                   const on = picked.includes(p.id);
                   return (

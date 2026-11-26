@@ -282,7 +282,7 @@ export function Thread({
             <div
               key={m.id}
               className={clsx(
-                'group relative flex gap-3 rounded-[4px] px-2 py-1 -mx-2 transition hover:bg-paper',
+                'group relative flex gap-3 rounded-lg px-2 py-1 -mx-2 transition hover:bg-paper',
                 grouped && 'pl-[50px]',
                 m.pending && 'opacity-60',
               )}
@@ -323,7 +323,7 @@ export function Thread({
                         key={emoji}
                         onClick={() => react(m.id, emoji)}
                         className={clsx(
-                          'flex items-center gap-1 rounded-[3px] border px-1.5 py-[2px] text-[11.5px] transition',
+                          'flex items-center gap-1 rounded-md border px-1.5 py-[2px] text-[11.5px] transition',
                           users.includes(meId)
                             ? 'border-brand/40 bg-brand-100 text-brand'
                             : 'border-line bg-white text-ink-muted hover:border-line-strong',
@@ -341,18 +341,18 @@ export function Thread({
               <div className="absolute right-0 top-0 hidden group-hover:block">
                 <button
                   onClick={() => setPickerFor(pickerFor === m.id ? null : m.id)}
-                  className="rounded-[3px] border border-line bg-white px-1.5 py-0.5 text-[12px] text-ink-muted hover:border-line-strong"
+                  className="rounded-md border border-line bg-white px-1.5 py-0.5 text-[12px] text-ink-muted hover:border-line-strong"
                   aria-label="Add a reaction"
                 >
                   ☺
                 </button>
                 {pickerFor === m.id && (
-                  <div className="absolute right-0 z-10 mt-1 flex gap-0.5 rounded-[4px] border border-line bg-white p-1 shadow-pop">
+                  <div className="absolute right-0 z-10 mt-1 flex gap-0.5 rounded-lg border border-line bg-white p-1 shadow-pop">
                     {QUICK.map((e) => (
                       <button
                         key={e}
                         onClick={() => react(m.id, e)}
-                        className="rounded-[3px] px-1.5 py-1 text-[15px] hover:bg-paper"
+                        className="rounded-md px-1.5 py-1 text-[15px] hover:bg-paper"
                       >
                         {e}
                       </button>
@@ -373,7 +373,7 @@ export function Thread({
             {pendingFiles.map((f) => (
               <span
                 key={f.id}
-                className="flex items-center gap-2 rounded-[3px] border border-line bg-paper px-2 py-1 text-[12px]"
+                className="flex items-center gap-2 rounded-md border border-line bg-paper px-2 py-1 text-[12px]"
               >
                 <IconFiles size={13} className="text-ink-faint" />
                 <span className="max-w-[12rem] truncate">{f.name}</span>
@@ -427,7 +427,7 @@ export function Thread({
             type="button"
             onClick={toggleRecording}
             className={clsx(
-              'btn-sm shrink-0 rounded-[5px] border px-2.5 font-semibold transition',
+              'btn-sm shrink-0 rounded-xl border px-2.5 font-semibold transition',
               recording
                 ? 'border-brick bg-brick text-white'
                 : 'border-line-strong bg-white text-ink-muted hover:border-navy hover:text-ink',
@@ -475,7 +475,7 @@ function renderMentions(body: string) {
   const parts = body.split(/(@[A-Za-z][\w.-]*)/g);
   return parts.map((p, i) =>
     p.startsWith('@') ? (
-      <span key={i} className="rounded-[2px] bg-brand-100 px-1 font-semibold text-brand">
+      <span key={i} className="rounded bg-brand-100 px-1 font-semibold text-brand">
         {p}
       </span>
     ) : (

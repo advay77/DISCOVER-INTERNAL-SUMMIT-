@@ -16,7 +16,7 @@ export function Avatar({
   return (
     <span
       className={clsx(
-        'inline-flex shrink-0 items-center justify-center rounded-[3px] font-semibold tracking-tight text-white',
+        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold tracking-tight text-white',
         ring && 'ring-2 ring-white',
       )}
       style={{ background: accent, width: size, height: size, fontSize: size * 0.35 }}
@@ -27,14 +27,15 @@ export function Avatar({
   );
 }
 
-/** Hairline tag with a status dot — not a filled candy pill. */
+/** Soft rounded chip with a status dot. */
 const TONES: Record<string, { box: string; dot: string }> = {
-  ok: { box: 'border-forest/30 bg-forest-100 text-forest', dot: '#1E7A4B' },
-  warn: { box: 'border-brass/30 bg-brass-100 text-brass', dot: '#B4761F' },
-  bad: { box: 'border-brick/30 bg-brick-100 text-brick', dot: '#A62B2B' },
-  brand: { box: 'border-brand/25 bg-brand-100 text-brand', dot: '#1F5FA8' },
-  neutral: { box: 'border-line bg-white text-ink-muted', dot: '#8A93A0' },
-  navy: { box: 'border-navy/20 bg-navy/[0.06] text-navy', dot: '#0A2240' },
+  ok: { box: 'border-transparent bg-forest-100 text-forest', dot: '#1E7A4B' },
+  warn: { box: 'border-transparent bg-brass-100 text-brass', dot: '#B4761F' },
+  bad: { box: 'border-transparent bg-brick-100 text-brick', dot: '#A62B2B' },
+  brand: { box: 'border-transparent bg-brand-100 text-brand', dot: '#1F5FA8' },
+  neutral: { box: 'border-transparent bg-panel text-ink-muted', dot: '#8F8F89' },
+  navy: { box: 'border-transparent bg-navy text-white', dot: '#E3F24A' },
+  lime: { box: 'border-transparent bg-lime text-lime-ink', dot: '#2A2E05' },
 };
 
 export function Pill({
@@ -101,8 +102,8 @@ export function Card({
   return (
     <section className={clsx('card overflow-hidden', className)}>
       {(title || action) && (
-        <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
-          <h2 className="text-[13px] font-semibold uppercase tracking-label text-ink-muted">{title}</h2>
+        <header className="flex items-center justify-between gap-3 px-5 pb-2 pt-4">
+          <h2 className="text-[16px] font-semibold tracking-[-0.01em] text-ink">{title}</h2>
           {action}
         </header>
       )}
@@ -121,9 +122,9 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-line pb-4">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div className="max-w-2xl">
-        <h1 className="display text-[30px] leading-tight text-ink">{title}</h1>
+        <h1 className="display text-[30px] leading-tight text-ink sm:text-[34px]">{title}</h1>
         {subtitle && <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-muted">{subtitle}</p>}
       </div>
       {action}
@@ -133,7 +134,7 @@ export function PageHeader({
 
 export function Empty({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center border border-dashed border-line-strong px-6 py-14 text-center">
+    <div className="flex flex-col items-center justify-center rounded-tile border border-dashed border-line-strong bg-panel/60 px-6 py-12 text-center">
       <p className="text-[14px] font-semibold text-ink">{title}</p>
       {hint && <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-ink-muted">{hint}</p>}
     </div>
@@ -160,13 +161,14 @@ export function Ring({
     <div className="flex flex-col items-center">
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={r} stroke="#E0E1DD" strokeWidth="5" fill="none" />
+          <circle cx={size / 2} cy={size / 2} r={r} stroke="#EEEDE8" strokeWidth="6" fill="none" />
           <circle
             cx={size / 2}
             cy={size / 2}
             r={r}
             stroke={tone}
-            strokeWidth="5"
+            strokeWidth="6"
+            strokeLinecap="round"
             fill="none"
             strokeDasharray={`${dash} ${c}`}
           />
@@ -175,67 +177,81 @@ export function Ring({
           {value}%
         </div>
       </div>
-      <p className="mt-2.5 text-[12px] font-semibold uppercase tracking-label text-ink-muted">{label}</p>
+      <p className="mt-2.5 text-[13px] font-semibold text-ink">{label}</p>
       {sub && <p className="mt-0.5 text-[11.5px] text-ink-faint">{sub}</p>}
     </div>
   );
 }
 
-/** A counter reads as a figure in a report: big numeral, quiet label, hairline box. */
+/**
+ * A counter: small label on top, a large figure underneath, an optional
+ * hint or icon on the right. `highlight` paints it lime — use it for the one
+ * figure on a screen that should catch the eye.
+ */
 export function StatTile({
   value,
   label,
   tone = 'brand',
   href,
   icon,
+  hint,
+  highlight = false,
 }: {
   value: React.ReactNode;
   label: string;
   tone?: 'brand' | 'ok' | 'warn' | 'bad' | 'navy';
   href?: string;
   icon?: React.ReactNode;
+  hint?: React.ReactNode;
+  highlight?: boolean;
 }) {
-  const rule = {
-    brand: 'before:bg-brand',
-    ok: 'before:bg-forest',
-    warn: 'before:bg-brass',
-    bad: 'before:bg-brick',
-    navy: 'before:bg-navy',
-  }[tone];
-
   const text = {
     brand: 'text-brand',
     ok: 'text-forest',
     warn: 'text-brass',
     bad: 'text-brick',
-    navy: 'text-navy',
+    navy: 'text-ink-muted',
   }[tone];
 
   const inner = (
     <div
       className={clsx(
-        'card relative overflow-hidden px-5 py-4 transition',
-        'before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:content-[""]',
-        rule,
-        href && 'hover:border-line-strong',
+        'flex h-full min-h-[112px] flex-col justify-between rounded-tile px-4 py-3.5 transition',
+        highlight ? 'bg-lime text-lime-ink' : 'bg-white shadow-card',
+        href && (highlight ? 'hover:bg-lime-600' : 'hover:ring-1 hover:ring-line-strong'),
       )}
     >
-      <div className="flex items-start justify-between">
-        <div className="display text-[34px] leading-none text-ink">{value}</div>
-        {icon && <span className={clsx('mt-0.5', text)}>{icon}</span>}
+      <div className="flex items-start justify-between gap-2">
+        <span className={clsx('truncate text-[12.5px] font-medium', highlight ? 'text-lime-ink/80' : 'text-ink-muted')}>
+          {label}
+        </span>
+        {icon && <span className={clsx('shrink-0', highlight ? 'text-lime-ink' : text)}>{icon}</span>}
       </div>
-      <div className="mt-2 text-[11.5px] uppercase tracking-label text-ink-muted">{label}</div>
+      <div className="mt-3 flex items-end justify-between gap-2">
+        <span className="display text-[34px] leading-none">{value}</span>
+        {hint && (
+          <span className={clsx('mb-0.5 whitespace-nowrap text-[11.5px] font-medium', highlight ? 'text-lime-ink/80' : 'text-ink-faint')}>
+            {hint}
+          </span>
+        )}
+      </div>
     </div>
   );
 
-  return href ? <Link href={href}>{inner}</Link> : inner;
+  return href ? (
+    <Link href={href} className="block h-full">
+      {inner}
+    </Link>
+  ) : (
+    inner
+  );
 }
 
 export function Bar({ value, tone = '#1F5FA8' }: { value: number; tone?: string }) {
   return (
-    <div className="h-[5px] w-full overflow-hidden bg-line">
+    <div className="h-[6px] w-full overflow-hidden rounded-full bg-paper">
       <div
-        className="h-full transition-all"
+        className="h-full rounded-full transition-all"
         style={{ width: `${Math.min(100, Math.max(0, value))}%`, background: tone }}
       />
     </div>

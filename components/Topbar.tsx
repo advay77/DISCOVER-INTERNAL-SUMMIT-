@@ -30,7 +30,7 @@ export function Topbar({
   const here = nav.find((n) => path === n.href || path.startsWith(n.href + '/'));
 
   return (
-    <header className="sticky top-0 z-30 flex h-[56px] items-center gap-2 border-b border-line bg-white/95 px-3.5 backdrop-blur sm:gap-3 sm:px-5 lg:h-[52px] lg:px-6">
+    <header className="sticky top-0 z-30 flex h-[56px] items-center gap-2 border-b border-line bg-white/95 px-3.5 backdrop-blur sm:gap-3 sm:px-5 lg:h-[72px] lg:border-b-0 lg:bg-paper/85 lg:px-6">
       {/* Phone and tablet: the mark and the page you are on. */}
       <Link href="/dashboard" className="shrink-0 lg:hidden" aria-label="DISCOVER home">
         <Logo tone="dark" size="sm" tagline={false} />
@@ -44,12 +44,12 @@ export function Topbar({
       <form action="/search" className="relative hidden min-w-0 max-w-sm flex-1 lg:block">
         <IconSearch
           size={15}
-          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-faint"
+          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-faint"
         />
         <input
           name="q"
           placeholder="Search tasks, people, speakers, messages"
-          className="input py-1.5 pl-8 text-[13px]"
+          className="input rounded-full border-transparent bg-white py-2.5 pl-10 text-[13px] shadow-card"
           aria-label="Search"
         />
       </form>
@@ -68,12 +68,12 @@ export function Topbar({
       <div className="relative">
         <button
           onClick={() => setOpen((v) => !v)}
-          className="flex min-h-[44px] items-center gap-2.5 rounded-[4px] py-1 pl-1 pr-1 hover:bg-paper lg:min-h-0 lg:pr-2"
+          className="flex min-h-[44px] items-center gap-2.5 rounded-full py-1 pl-1 pr-1 hover:bg-white lg:min-h-0 lg:bg-white lg:pr-3.5 lg:shadow-card"
         >
           <Avatar name={user.name} accent={user.accent} size={28} />
           <span className="hidden text-left sm:block">
             <span className="block text-[12.5px] font-semibold leading-tight text-ink">{user.name}</span>
-            <span className="block text-[10.5px] uppercase tracking-label leading-tight text-ink-faint">
+            <span className="block text-[11px] leading-tight text-ink-faint">
               {roleName}
             </span>
           </span>
@@ -82,14 +82,14 @@ export function Topbar({
         {open && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-            <div className="absolute right-0 z-20 mt-1.5 w-[248px] overflow-hidden rounded-[5px] border border-line bg-white shadow-pop">
-              <div className="flex items-start gap-3 border-b border-line bg-paper px-4 py-3.5">
+            <div className="absolute right-0 z-20 mt-1.5 w-[248px] overflow-hidden rounded-[18px] border border-line bg-white shadow-pop">
+              <div className="flex items-start gap-3 border-b border-line bg-panel px-4 py-3.5">
                 <Avatar name={user.name} accent={user.accent} size={34} />
                 <div className="min-w-0">
                   <p className="truncate text-[13.5px] font-semibold leading-tight text-ink">{user.name}</p>
                   <p className="truncate text-[11.5px] leading-tight text-ink-muted">{user.title ?? ''}</p>
                   <p className="truncate text-[11px] leading-tight text-ink-faint">{user.email}</p>
-                  <span className="mt-1.5 inline-block rounded-[3px] border border-navy/20 bg-navy/[0.06] px-1.5 py-[2px] text-[10px] font-bold uppercase tracking-label text-navy">
+                  <span className="mt-1.5 inline-block rounded-full bg-lime px-2 py-[2px] text-[10.5px] font-semibold text-lime-ink">
                     {roleName}
                   </span>
                 </div>
@@ -130,7 +130,7 @@ export function Topbar({
                   <IconChat size={15} className="text-ink-faint" />
                   Messages
                   {unread > 0 && (
-                    <span className="ml-auto rounded-[3px] bg-brick px-1.5 text-[10px] font-bold text-white">
+                    <span className="ml-auto rounded-md bg-brick px-1.5 text-[10px] font-bold text-white">
                       {unread}
                     </span>
                   )}

@@ -73,7 +73,7 @@ export function NewEvent({
                       type="button"
                       onClick={() => setKind(k.key)}
                       className={clsx(
-                        'rounded-[5px] border px-3 py-2 text-left transition',
+                        'rounded-xl border px-3 py-2 text-left transition',
                         kind === k.key
                           ? 'border-navy bg-navy text-white'
                           : 'border-line-strong bg-white hover:border-navy',
