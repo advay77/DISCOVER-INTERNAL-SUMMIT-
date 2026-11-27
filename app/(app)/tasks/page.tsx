@@ -7,6 +7,10 @@ import { IconTask, IconAlert, IconClock, IconCheck, IconSearch } from '@/compone
 import { dueLabel } from '@/lib/format';
 import { TaskBoard } from './TaskBoard';
 import { NewTask } from './NewTask';
+import { NotesToTasks } from './NotesToTasks';
+import { TaskFilters } from './TaskFilters';
+
+const QUICK_LABEL: Record<string, string> = { overdue: 'Overdue', week: 'Due this week', done: 'Completed', unassigned: 'No owner', nodate: 'No due date', high: 'High priority', mine: 'My open tasks' };
 
 const COLUMNS = [
   { key: 'todo', label: 'To Do' },
@@ -15,12 +19,14 @@ const COLUMNS = [
   { key: 'done', label: 'Done' },
 ];
 
-type Params = { filter?: string; view?: string; ws?: string; q?: string };
+type Params = { filter?: string; view?: string; ws?: string; q?: string; who?: string; pri?: string };
 
 export default async function TasksPage({ searchParams }: { searchParams: Promise<Params> }) {
   const user = await requireCan('tasks:view');
   const params = await searchParams;
   const { filter, view = 'board', ws } = params;
+  const who = params.who === 'mine' ? 'mine' : undefined;
+  const pri = ['high', 'medium', 'low'].includes(params.pri ?? '') ? params.pri : undefined;
   const q = (params.q ?? '').trim().slice(0, 80);
 
   const scope = scopeOf(user, 'tasks:view');
@@ -41,6 +47,8 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
 
   const and: any[] = [base];
   if (filter && QUICK[filter]) and.push(QUICK[filter]);
+  if (who) and.push({ ownerId: user.id });
+  if (pri) and.push({ priority: pri });
   if (ws) and.push({ workstreamId: ws });
   if (q) and.push({ OR: [{ title: icontains(q) }, { category: icontains(q) }] });
   const where = { AND: and };
@@ -76,9 +84,6 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const done = total - openAll.length;
   const nOverdue = openAll.filter((t) => t.dueDate && t.dueDate < now).length;
   const nWeek = openAll.filter((t) => t.dueDate && t.dueDate >= now && t.dueDate <= weekEnd).length;
-  const nUnassigned = openAll.filter((t) => !t.ownerId).length;
-  const nNoDate = openAll.filter((t) => !t.dueDate).length;
-  const nHigh = openAll.filter((t) => t.priority === 'high').length;
   const nMine = openAll.filter((t) => t.ownerId === user.id).length;
 
   const canEdit = scopeOf(user, 'tasks:edit') !== 'none';
@@ -87,7 +92,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
 
   /** Build a /tasks URL from the current params with some changed. */
   const href = (change: Partial<Params>) => {
-    const next: Record<string, string | undefined> = { filter, ws, view: view === 'board' ? undefined : view, q: q || undefined, ...change };
+    const next: Record<string, string | undefined> = { filter, ws, who, pri, view: view === 'board' ? undefined : view, q: q || undefined, ...change };
     const qs = Object.entries(next)
       .filter(([, v]) => v)
       .map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`)
@@ -95,30 +100,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
     return `/tasks${qs ? `?${qs}` : ''}`;
   };
 
-  const quick = [
-    { key: 'overdue', label: 'Overdue', n: nOverdue, alert: true },
-    { key: 'week', label: 'Due this week', n: nWeek },
-    { key: 'unassigned', label: 'No owner', n: nUnassigned },
-    { key: 'nodate', label: 'No due date', n: nNoDate },
-    { key: 'high', label: 'High priority', n: nHigh },
-    { key: 'done', label: 'Completed', n: done },
-  ];
 
-  const chip = (active: boolean) =>
-    clsx(
-      'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition',
-      active ? 'bg-navy text-white' : 'bg-white text-ink-muted shadow-card hover:text-ink',
-    );
-  const count_ = (active: boolean, n: number, alert = false) => (
-    <span
-      className={clsx(
-        'min-w-[20px] rounded-full px-1.5 text-center text-[11px] font-semibold',
-        active ? 'bg-white/20 text-white' : alert && n ? 'bg-brick-100 text-brick' : 'bg-panel text-ink-muted',
-      )}
-    >
-      {n}
-    </span>
-  );
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-4">
@@ -132,7 +114,12 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
               : 'The annual playbook, dated and assigned. Every task carries its own thread.'}
           </p>
         </div>
-        {canEdit && <NewTask workstreams={workstreams} people={people} currentUserId={user.id} />}
+        {canEdit && (
+          <div className="flex flex-wrap gap-2">
+            <NotesToTasks workstreams={workstreams} people={people} currentUserId={user.id} defaultWorkstreamId={ws} />
+            <NewTask workstreams={workstreams} people={people} currentUserId={user.id} />
+          </div>
+        )}
       </div>
 
       {/* Summary */}
@@ -156,51 +143,37 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       </section>
 
       {/* Toolbar */}
-      <div className="space-y-2.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="chip-row flex w-full flex-wrap items-center gap-2 lg:w-auto lg:flex-1">
-            <Link prefetch={false} href={href({ filter: undefined, ws: undefined })} className={chip(!filter && !ws)}>
-              Everyone
-            </Link>
-            <Link prefetch={false} href={href({ filter: filter === 'mine' ? undefined : 'mine' })} className={chip(filter === 'mine')}>
-              My tasks {count_(filter === 'mine', nMine)}
-            </Link>
-            <span className="mx-0.5 hidden h-5 w-px bg-line-strong sm:block" />
-            {workstreams.map((w) => (
-              <Link prefetch={false} key={w.id} href={href({ ws: ws === w.id ? undefined : w.id })} className={chip(ws === w.id)}>
-                <span className="h-2 w-2 rounded-full" style={{ background: w.color }} />
-                {w.name}
-              </Link>
-            ))}
-          </div>
-
-          <form action="/tasks" className="relative w-full sm:w-auto">
-            {filter && <input type="hidden" name="filter" value={filter} />}
-            {ws && <input type="hidden" name="ws" value={ws} />}
-            {view !== 'board' && <input type="hidden" name="view" value={view} />}
-            <IconSearch size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint" />
-            <input
-              name="q"
-              defaultValue={q}
-              placeholder="Find a task"
-              aria-label="Find a task"
-              className="input w-full rounded-full border-transparent bg-white py-1.5 pl-9 shadow-card sm:w-56"
-            />
-          </form>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="chip-row flex w-full flex-wrap items-center gap-2 lg:w-auto lg:flex-1">
-            {quick.map((f) => {
-              const active = filter === f.key;
-              return (
-                <Link prefetch={false} key={f.key} href={href({ filter: active ? undefined : f.key })} className={chip(active)}>
-                  {f.label} {count_(active, f.n, f.alert)}
-                </Link>
-              );
-            })}
-          </div>
-          <span className="mr-auto text-[12.5px] text-ink-faint lg:mr-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <TaskFilters
+          values={{ who, ws, pri }}
+          workstreams={workstreams}
+          nMine={nMine}
+          base={{ filter, q: q || undefined, view: view === 'board' ? undefined : view }}
+        />
+        {filter && QUICK_LABEL[filter] && (
+          <Link prefetch={false} href={href({ filter: undefined })} className="inline-flex items-center gap-1.5 rounded-full bg-navy px-3.5 py-2 text-[13px] font-medium text-white">
+            {QUICK_LABEL[filter]} <span aria-hidden>×</span>
+            <span className="sr-only">Clear filter</span>
+          </Link>
+        )}
+        <form action="/tasks" className="relative w-full sm:ml-auto sm:w-auto">
+          {filter && <input type="hidden" name="filter" value={filter} />}
+          {ws && <input type="hidden" name="ws" value={ws} />}
+          {who && <input type="hidden" name="who" value={who} />}
+          {pri && <input type="hidden" name="pri" value={pri} />}
+          {view !== 'board' && <input type="hidden" name="view" value={view} />}
+          <IconSearch size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint" />
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="Find a task"
+            aria-label="Find a task"
+            className="input w-full rounded-full border-transparent bg-white py-2 pl-9 shadow-card sm:w-56"
+          />
+        </form>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[12.5px] text-ink-faint">
             Showing {tasks.length} of {total}
             {q && (
               <>
@@ -225,7 +198,6 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
               </Link>
             ))}
           </span>
-        </div>
       </div>
 
       {tasks.length === 0 ? (
