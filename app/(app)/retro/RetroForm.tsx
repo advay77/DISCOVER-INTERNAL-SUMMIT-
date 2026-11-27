@@ -11,7 +11,7 @@ const KINDS = [
   { key: 'consider', label: 'Consider', hint: 'New idea for next year', active: 'bg-brand text-white' },
 ];
 
-export function RetroForm() {
+export function RetroForm({ workstreamId, workstreamName }: { workstreamId: string; workstreamName: string }) {
   const [pending, start] = useTransition();
   const [kind, setKind] = useState('plus');
   const [error, setError] = useState<string | null>(null);
@@ -36,8 +36,9 @@ export function RetroForm() {
       className="card p-4 sm:p-5"
     >
       <input type="hidden" name="kind" value={kind} />
+      <input type="hidden" name="workstreamId" value={workstreamId} />
       <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-1 text-[13px] font-medium text-ink-muted">Add a note:</span>
+        <span className="mr-1 text-[13px] font-medium text-ink-muted">Add a note to <b className="text-ink">{workstreamName}</b>:</span>
         {KINDS.map((k) => (
           <button
             key={k.key}

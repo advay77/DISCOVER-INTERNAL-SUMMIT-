@@ -98,6 +98,7 @@ model Workstream {
   sponsors    Sponsor[]
   vendors     Vendor[]
   questions   OpenQuestion[]
+  retroItems  RetroItem[]
   channels    Channel[]
   events      Event[]
 }
@@ -332,6 +333,10 @@ model RetroItem {
   event    Event   @relation(fields: [eventId], references: [id])
   kind     String // plus | delta | consider
   text     String
+  /// Which workstream's retro this belongs to. Null = Annual Summit (notes
+  /// written before retros were split by workstream).
+  workstreamId String?
+  workstream   Workstream? @relation(fields: [workstreamId], references: [id])
   authorId String?
   author   User?   @relation(fields: [authorId], references: [id])
   createdAt DateTime @default(now())

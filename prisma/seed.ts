@@ -354,7 +354,7 @@ async function main() {
   console.log('→ retro from the 2024 summit');
   for (const r of RETRO_2024) {
     await db.retroItem.create({
-      data: { eventId: event.id, kind: r.kind, text: r.text, authorId: users['lisa@discover.org'] },
+      data: { eventId: event.id, kind: r.kind, text: r.text, authorId: users['lisa@discover.org'], workstreamId: ws['summit'] },
     });
   }
 

@@ -1,9 +1,10 @@
-import { requireCan, can } from '@/lib/authz';
+import { requireCan, can, visibleWorkstreams } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { currentEvent } from '@/lib/event';
 import { PageHeader, Avatar, Empty, StatTile } from '@/components/ui';
 import { relativeTime } from '@/lib/format';
 import { RetroForm } from './RetroForm';
+import { WorkstreamPicker } from './WorkstreamPicker';
 
 const COLUMNS = [
   { kind: 'plus', title: 'Plus', hint: 'Worked well — keep it', tint: 'bg-forest-100', dot: 'bg-forest', tone: 'ok' as const },
@@ -11,13 +12,22 @@ const COLUMNS = [
   { kind: 'consider', title: 'Consider next year', hint: 'New ideas for the next cycle', tint: 'bg-brand-100', dot: 'bg-brand', tone: 'brand' as const },
 ];
 
-export default async function RetroPage() {
+export default async function RetroPage({ searchParams }: { searchParams: Promise<{ ws?: string }> }) {
   const user = await requireCan('retro:view');
-  const event = await currentEvent();
+  const { ws: wsKey } = await searchParams;
+  const [event, workstreams] = await Promise.all([
+    currentEvent(),
+    db.workstream.findMany({ where: visibleWorkstreams(user), orderBy: { order: 'asc' }, select: { id: true, key: true, name: true, color: true } }),
+  ]);
   if (!event) return <Empty title="No active cycle" />;
+  if (workstreams.length === 0) return <Empty title="No workstreams" />;
+
+  // Annual Summit is the default; notes written before the split belong to it.
+  const active = workstreams.find((w) => w.key === wsKey) ?? workstreams.find((w) => w.key === 'summit') ?? workstreams[0];
+  const isSummit = active.key === 'summit';
 
   const items = await db.retroItem.findMany({
-    where: { eventId: event.id },
+    where: { eventId: event.id, OR: isSummit ? [{ workstreamId: active.id }, { workstreamId: null }] : [{ workstreamId: active.id }] },
     orderBy: { createdAt: 'desc' },
     include: { author: true },
   });
@@ -30,6 +40,7 @@ export default async function RetroPage() {
       <PageHeader
         title="Retro"
         subtitle="The best artefact DISCOVER produces. Everything here rolls forward into next year's playbook."
+        action={<WorkstreamPicker workstreams={workstreams.map(({ key, name, color }) => ({ key, name, color }))} active={active.key} />}
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -39,7 +50,7 @@ export default async function RetroPage() {
         <StatTile value={authors} label="Voices" tone="navy" hint="people wrote" highlight />
       </div>
 
-      {writable && <RetroForm />}
+      {writable && <RetroForm workstreamId={active.id} workstreamName={active.name} />}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {COLUMNS.map((c) => {

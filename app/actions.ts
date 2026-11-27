@@ -264,9 +264,15 @@ export async function addRetroItem(data: FormData) {
   const note = text(data.get('text'), BOUND.notes);
   if (!note) return { error: 'Write something first.' };
 
+  const wsId = validId(data.get('workstreamId'));
+  const ws = wsId ? await db.workstream.findUnique({ where: { id: wsId }, select: { id: true, restricted: true } }) : null;
+  if (!ws) return { error: 'Pick a workstream.' };
+  if (ws.restricted && !can(user, 'finance:view')) return { error: 'You cannot write to this retro.' };
+
   await db.retroItem.create({
     data: {
       eventId: event.id,
+      workstreamId: ws.id,
       kind: oneOf(data.get('kind'), STATUSES.retro, 'plus'),
       text: note,
       authorId: user.id,
@@ -766,4 +772,52 @@ export async function deleteVendor(id: string) {
   await log(user.id, 'removed', 'vendor', row.name);
   revalidatePath('/logistics');
   return { ok: true };
+}
+
+/* ------------------------------------------------------- notes → tasks */
+
+/**
+ * Creates the reviewed drafts from "Tasks from notes" in one go. Each row is
+ * validated like a single new task; rows that fail are skipped and reported.
+ */
+export async function createTasksFromNotes(rows: unknown) {
+  const user = await requireUser();
+  if (scopeOf(user, 'tasks:edit') === 'none') return { error: 'You cannot create tasks.' };
+  if (!Array.isArray(rows) || rows.length === 0) return { error: 'Nothing to create.' };
+  if (rows.length > 60) return { error: 'Create at most 60 tasks at a time.' };
+
+  const event = await db.event.findFirst({ where: { isCurrent: true }, select: { id: true } });
+  const streams = await db.workstream.findMany({ select: { id: true, name: true, restricted: true } });
+  const people = new Set((await db.user.findMany({ where: { isActive: true }, select: { id: true } })).map((u) => u.id));
+  const seeFinance = can(user, 'finance:view');
+
+  let created = 0;
+  const skipped: string[] = [];
+  for (const r of rows as Record<string, unknown>[]) {
+    const title = text(r?.title, BOUND.title);
+    if (!title) { skipped.push('(empty title)'); continue; }
+    const ws = streams.find((w) => w.id === validId(r?.workstreamId));
+    if (!ws || (ws.restricted && !seeFinance)) { skipped.push(title); continue; }
+    const ownerId = validId(r?.ownerId);
+    const task = await db.task.create({
+      data: {
+        title,
+        description: optionalText(r?.source ? `From meeting notes: “${r.source}”` : '', BOUND.notes),
+        category: ws.name,
+        priority: oneOf(r?.priority, STATUSES.priority, 'medium'),
+        status: 'todo',
+        dueDate: validDate(r?.dueDate),
+        workstreamId: ws.id,
+        ownerId: ownerId && people.has(ownerId) ? ownerId : user.id,
+        createdById: user.id,
+        eventId: event?.id,
+      },
+    });
+    created++;
+    await notify(task.ownerId, user.id, `${user.name} assigned ${title} to you`, `/tasks/${task.id}`);
+  }
+  if (created) await log(user.id, 'created', 'task', `${created} tasks from meeting notes`);
+  revalidatePath('/tasks');
+  revalidatePath('/dashboard');
+  return { ok: true, created, skipped };
 }
